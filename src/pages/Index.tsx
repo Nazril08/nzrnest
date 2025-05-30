@@ -1,9 +1,9 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,12 +61,12 @@ const Index = () => {
       <nav className="border-b border-white/10 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">N</span>
               </div>
               <span className="text-white text-xl font-bold">NzrNest</span>
-            </div>
+            </Link>
             
             <div className="hidden md:flex items-center space-x-8">
               <a href="#" className="text-gray-300 hover:text-white transition-colors">Home</a>
@@ -77,9 +77,11 @@ const Index = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="text-white hover:bg-white/10">
-                Sign In
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" className="text-white hover:bg-white/10">
+                  Sign In
+                </Button>
+              </Link>
               <Button className="bg-purple-600 hover:bg-purple-700 text-white">
                 Sign Up
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -232,12 +234,12 @@ const Index = () => {
       <footer className="border-t border-white/10 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">N</span>
               </div>
               <span className="text-white text-xl font-bold">NzrNest</span>
-            </div>
+            </Link>
             <p className="text-gray-400">© 2025 NzrNest. All rights reserved.</p>
           </div>
         </div>
