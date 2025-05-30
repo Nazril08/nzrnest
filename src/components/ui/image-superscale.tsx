@@ -11,6 +11,18 @@ import { Image, Loader2, Download, RefreshCw, Upload, Link as LinkIcon, X, Histo
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getImageHistory, saveImageHistory, saveImageAsBase64 } from "@/lib/storage";
 
+// Deklarasi tipe window
+declare global {
+  interface Window {
+    _lastObjectUrl: string | null;
+  }
+}
+
+// Inisialisasi property global
+if (typeof window !== 'undefined') {
+  window._lastObjectUrl = null;
+}
+
 // Interface untuk history item
 interface HistoryItem {
   id: string;
@@ -201,16 +213,134 @@ const ImageSuperscale = () => {
     }
   };
   
+  const enhanceImageDirectly = async (imageUrl) => {
+    try {
+      showStatus('Enhancing image...', 'info');
+      
+      // Panggil API upscale langsung dengan URL gambar
+      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/upscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}`;
+      
+      console.log("Calling API:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'image/*'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to enhance image (${response.status})`);
+      }
+      
+      // Get the enhanced image blob
+      const imageBlob = await response.blob();
+      
+      if (imageBlob.size === 0) {
+        throw new Error('Received empty response from API');
+      }
+
+      // Deteksi perangkat mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Pada perangkat mobile, kita perlu lebih berhati-hati dengan ukuran gambar
+      let resultImageUrl;
+      
+      try {
+        // Untuk perangkat mobile dan gambar besar, gunakan object URL alih-alih base64
+        if (isMobile && imageBlob.size > 2 * 1024 * 1024) { // Jika lebih dari 2MB pada mobile
+          console.log("Large image detected on mobile, using URL instead of base64");
+          
+          // Buat object URL sebagai alternatif yang lebih ringan daripada base64
+          resultImageUrl = URL.createObjectURL(imageBlob);
+          
+          // Update UI with enhanced image
+          setResultImage(resultImageUrl);
+          
+          // Add to history with URL reference
+          addToHistory(resultImageUrl);
+          
+          showStatus('Image enhanced successfully!', 'success');
+        } else {
+          // Untuk ukuran kecil atau desktop, gunakan base64 seperti biasa
+          const reader = new FileReader();
+          reader.readAsDataURL(imageBlob);
+          
+          reader.onloadend = () => {
+            const base64data = reader.result as string;
+            
+            // Update UI with enhanced image
+            setResultImage(base64data);
+            
+            // Add to history
+            addToHistory(base64data);
+            
+            showStatus('Image enhanced successfully!', 'success');
+          };
+          
+          reader.onerror = () => {
+            throw new Error('Failed to convert image to base64');
+          };
+        }
+      } catch (memoryError) {
+        console.error('Memory error:', memoryError);
+        showStatus('Device memory limit reached. Try a smaller image or lower resize factor.', 'error');
+        setResultImage(null);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showStatus(error instanceof Error ? error.message : 'Failed to enhance image. Please try again.', 'error');
+      setResultImage(null);
+    }
+  };
+  
   // Fungsi untuk menambahkan item ke history
   const addToHistory = async (resultImageUrl: string) => {
     try {
-      // Konversi gambar ke base64 untuk penyimpanan yang lebih permanen
-      const originalBase64 = originalImage ? await saveImageAsBase64(originalImage) : null;
-      const resultBase64 = await saveImageAsBase64(resultImageUrl);
+      // Deteksi perangkat mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      if (!resultBase64) {
-        console.error('Failed to convert result image to base64');
-        return;
+      // Untuk URLs yang dimulai dengan blob:, kita tidak perlu mengubahnya
+      const isObjectUrl = resultImageUrl.startsWith('blob:');
+      
+      // Konversi gambar ke base64 untuk penyimpanan yang lebih permanen
+      let originalBase64 = null;
+      let resultBase64 = resultImageUrl;
+      
+      // Pada mobile, kita perlu lebih berhati-hati dengan ukuran gambar
+      if (isMobile) {
+        // Untuk gambar original pada mobile, resize jika perlu
+        if (originalImage) {
+          try {
+            // Jika URL dimulai dengan blob: atau data:, gunakan langsung
+            if (originalImage.startsWith('blob:') || originalImage.startsWith('data:')) {
+              originalBase64 = originalImage;
+            } else {
+              // Jika URL normal, resize untuk thumbnail
+              originalBase64 = await saveImageAsBase64WithResize(originalImage, 400);
+            }
+          } catch (error) {
+            console.error('Error converting original to base64:', error);
+            originalBase64 = null;
+          }
+        }
+        
+        // Untuk gambar hasil pada mobile, jika bukan object URL dan bukan base64, resize
+        if (!isObjectUrl && !resultImageUrl.startsWith('data:')) {
+          try {
+            resultBase64 = await saveImageAsBase64WithResize(resultImageUrl, 800);
+          } catch (error) {
+            console.error('Error converting result to base64:', error);
+            resultBase64 = resultImageUrl;
+          }
+        }
+      } else {
+        // Untuk desktop, gunakan pendekatan normal
+        originalBase64 = originalImage ? await saveImageAsBase64(originalImage) : null;
+        
+        if (!resultImageUrl.startsWith('data:') && !isObjectUrl) {
+          resultBase64 = await saveImageAsBase64(resultImageUrl);
+        }
       }
       
       // Generate ID unik
@@ -235,6 +365,56 @@ const ImageSuperscale = () => {
       console.error('Error adding to history:', error);
       showStatus('Failed to save to history', 'error');
     }
+  };
+
+  // Fungsi untuk resize gambar sebelum konversi ke base64 (untuk perangkat mobile)
+  const saveImageAsBase64WithResize = (imageUrl: string, maxDimension: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new globalThis.Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
+        // Hitung dimensi baru dengan mempertahankan aspek rasio
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height && width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+        
+        // Buat canvas untuk resize gambar
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Gambar ke canvas dengan ukuran baru
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Konversi ke base64 dengan kualitas lebih rendah untuk mobile
+        try {
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image for resizing'));
+      };
+      
+      img.src = imageUrl;
+    });
   };
 
   // Fungsi untuk memuat item dari history
@@ -265,59 +445,6 @@ const ImageSuperscale = () => {
     setHistory([]);
     saveImageHistory([]);
     showStatus('History cleared', 'info');
-  };
-  
-  const enhanceImageDirectly = async (imageUrl) => {
-    try {
-      showStatus('Enhancing image...', 'info');
-      
-      // Panggil API upscale langsung dengan URL gambar
-      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/upscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}`;
-      
-      console.log("Calling API:", apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'image/*'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to enhance image (${response.status})`);
-      }
-      
-      // Get the enhanced image blob
-      const imageBlob = await response.blob();
-      
-      if (imageBlob.size === 0) {
-        throw new Error('Received empty response from API');
-      }
-      
-      // Konversi blob ke base64 untuk penyimpanan yang lebih permanen
-      const reader = new FileReader();
-      reader.readAsDataURL(imageBlob);
-      
-      const base64Result = await new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          resolve(base64data);
-        };
-        reader.onerror = () => reject(new Error('Failed to convert image to base64'));
-      });
-      
-      // Update UI with enhanced image
-      setResultImage(base64Result);
-      
-      // Add to history
-      addToHistory(base64Result);
-      
-      showStatus('Image enhanced successfully!', 'success');
-    } catch (error) {
-      console.error('Error:', error);
-      showStatus(error instanceof Error ? error.message : 'Failed to enhance image. Please try again.', 'error');
-      setResultImage(null);
-    }
   };
   
   const uploadToTempServer = async (file: File): Promise<string> => {
@@ -389,18 +516,48 @@ const ImageSuperscale = () => {
   
   const handleDownload = () => {
     if (resultImage) {
-      // Untuk gambar base64, kita bisa langsung menggunakan URL tersebut
-      const link = document.createElement('a');
-      link.href = resultImage;
-      const fileName = uploadedImage ? 
-        `enhanced_${resizeFactor}x_${uploadedImage.name}` : 
-        `enhanced_${resizeFactor}x_image.png`;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showStatus('Image downloaded successfully', 'success');
+      try {
+        // Untuk blob URL, kita perlu mengambil blob terlebih dahulu
+        if (resultImage.startsWith('blob:')) {
+          fetch(resultImage)
+            .then(res => res.blob())
+            .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              const fileName = uploadedImage ? 
+                `enhanced_${resizeFactor}x_${uploadedImage.name}` : 
+                `enhanced_${resizeFactor}x_image.png`;
+              link.download = fileName;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              
+              showStatus('Image downloaded successfully', 'success');
+            })
+            .catch(err => {
+              console.error('Download error:', err);
+              showStatus('Failed to download image', 'error');
+            });
+        } else {
+          // Untuk gambar base64, kita bisa langsung menggunakan URL tersebut
+          const link = document.createElement('a');
+          link.href = resultImage;
+          const fileName = uploadedImage ? 
+            `enhanced_${resizeFactor}x_${uploadedImage.name}` : 
+            `enhanced_${resizeFactor}x_image.png`;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          showStatus('Image downloaded successfully', 'success');
+        }
+      } catch (error) {
+        console.error('Download error:', error);
+        showStatus('Failed to download image', 'error');
+      }
     }
   };
   
