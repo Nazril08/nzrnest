@@ -99,3 +99,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .bg-purple-gradient {
+    background: linear-gradient(135deg, #0a051c 0%, #150b30 50%, #12092a 100%);
+    position: relative;
+  }
+  
+  .bg-purple-gradient::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(99, 58, 240, 0.05) 0%, transparent 25%),
+      radial-gradient(circle at 80% 80%, rgba(76, 0, 255, 0.05) 0%, transparent 30%),
+      radial-gradient(circle at 50% 50%, rgba(94, 2, 255, 0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .bg-purple-gradient > * {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .progress-purple [data-radix-progress-indicator] {
+    @apply bg-purple-600;
+  }
+}

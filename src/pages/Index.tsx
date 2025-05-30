@@ -1,21 +1,21 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const tools = [
     {
-      title: "AI Image Upscaler",
-      description: "Enhance your images with AI-powered upscaling technology. Transform low-resolution images into high-quality masterpieces.",
+      title: "AI Image Enhancer",
+      description: "Enhance your images with Waifu2x AI technology. Transform low-resolution images into high-quality masterpieces.",
       icon: Image,
-      image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=600&h=400",
-      featured: true,
-      category: "image"
+      featured: false,
+      category: "image",
+      path: "/image-superscale"
     },
     {
       title: "Text Generator",
@@ -56,9 +56,9 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-purple-gradient">
       {/* Navigation */}
-      <nav className="border-b border-white/10 backdrop-blur-sm">
+      <nav className="border-b border-white/5 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
@@ -147,50 +147,42 @@ const Index = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredTools.map((tool, index) => (
-              <Card 
+              <Link 
+                to={tool.path || "#"} 
                 key={index} 
-                className={`group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 backdrop-blur-sm overflow-hidden ${
-                  tool.featured ? 'xl:col-span-2 xl:row-span-1' : ''
-                }`}
+                className={tool.path ? "cursor-pointer" : "cursor-not-allowed"}
               >
-                <CardHeader className="pb-4 relative">
-                  {tool.image && (
-                    <div className="mb-6 rounded-xl overflow-hidden relative">
-                      <img 
-                        src={tool.image} 
-                        alt={tool.title}
-                        className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card 
+                  className={`group bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-600/10 backdrop-blur-sm overflow-hidden h-full`}
+                >
+                  <CardHeader className="pb-4 relative">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
+                        <tool.icon className="text-white" size={28} />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
+                          {tool.title}
+                        </CardTitle>
+                        <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
+                          {tool.category}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex items-start space-x-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
-                      <tool.icon className="text-white" size={28} />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
-                        {tool.title}
-                      </CardTitle>
-                      <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
-                        {tool.category}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
+                      {tool.description}
+                    </CardDescription>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${tool.path ? 'text-purple-400' : 'text-gray-500'}`}>
+                        {tool.path ? 'Try Now' : 'Coming Soon'}
                       </span>
+                      <ArrowRight className={`h-4 w-4 ${tool.path ? 'text-purple-400 group-hover:translate-x-1 transition-transform duration-200' : 'text-gray-500'}`} />
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
-                    {tool.description}
-                  </CardDescription>
-                  <Button 
-                    variant="ghost" 
-                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/10 p-0 h-auto font-medium group/btn"
-                  >
-                    Try Now
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
-                  </Button>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
 
@@ -209,7 +201,7 @@ const Index = () => {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-2xl p-12 border border-white/10 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#150b30] to-[#1d1040] rounded-2xl p-12 border border-[#2a1b4a] backdrop-blur-sm">
             <div className="flex items-center justify-center mb-4">
               <Zap className="text-purple-400 mr-2" size={20} />
               <span className="text-purple-300 text-sm font-medium">Kickstart your AI Startup</span>
@@ -229,7 +221,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="border-t border-[#2a1b4a] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
