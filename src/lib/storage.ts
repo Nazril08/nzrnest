@@ -100,18 +100,51 @@ export const saveImageAsBase64 = async (imageUrl: string): Promise<string> => {
       return imageUrl;
     }
     
-    // Jika URL blob, konversi ke base64
+    // Jika URL blob atau URL normal, konversi ke base64
     const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    
     const blob = await response.blob();
     
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('Error in FileReader:', error);
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
   } catch (error) {
     console.error('Error converting image to base64:', error);
-    return '';
+    // Jika gagal, coba pendekatan alternatif dengan Image API
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (canvasError) {
+          console.error('Canvas error:', canvasError);
+          reject(canvasError);
+        }
+      };
+      img.onerror = (imgError) => {
+        console.error('Image load error:', imgError);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = imageUrl;
+    });
   }
 }; 

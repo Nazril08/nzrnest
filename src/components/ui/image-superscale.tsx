@@ -300,47 +300,39 @@ const ImageSuperscale = () => {
       // Deteksi perangkat mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      // Untuk URLs yang dimulai dengan blob:, kita tidak perlu mengubahnya
-      const isObjectUrl = resultImageUrl.startsWith('blob:');
-      
       // Konversi gambar ke base64 untuk penyimpanan yang lebih permanen
       let originalBase64 = null;
-      let resultBase64 = resultImageUrl;
+      let resultBase64 = null;
       
-      // Pada mobile, kita perlu lebih berhati-hati dengan ukuran gambar
-      if (isMobile) {
-        // Untuk gambar original pada mobile, resize jika perlu
-        if (originalImage) {
-          try {
-            // Jika URL dimulai dengan blob: atau data:, gunakan langsung
-            if (originalImage.startsWith('blob:') || originalImage.startsWith('data:')) {
-              originalBase64 = originalImage;
-            } else {
-              // Jika URL normal, resize untuk thumbnail
-              originalBase64 = await saveImageAsBase64WithResize(originalImage, 400);
-            }
-          } catch (error) {
-            console.error('Error converting original to base64:', error);
-            originalBase64 = null;
+      // Untuk gambar original
+      if (originalImage) {
+        try {
+          // Pastikan kita selalu menyimpan sebagai base64
+          originalBase64 = await saveImageAsBase64(originalImage);
+          
+          // Resize jika mobile untuk menghemat ruang
+          if (isMobile && originalBase64) {
+            originalBase64 = await saveImageAsBase64WithResize(originalBase64, 400);
           }
+        } catch (error) {
+          console.error('Error converting original to base64:', error);
+          originalBase64 = null;
         }
+      }
+      
+      // Untuk gambar hasil
+      try {
+        // Pastikan kita selalu menyimpan sebagai base64
+        resultBase64 = await saveImageAsBase64(resultImageUrl);
         
-        // Untuk gambar hasil pada mobile, jika bukan object URL dan bukan base64, resize
-        if (!isObjectUrl && !resultImageUrl.startsWith('data:')) {
-          try {
-            resultBase64 = await saveImageAsBase64WithResize(resultImageUrl, 800);
-          } catch (error) {
-            console.error('Error converting result to base64:', error);
-            resultBase64 = resultImageUrl;
-          }
+        // Resize jika mobile untuk menghemat ruang
+        if (isMobile && resultBase64) {
+          resultBase64 = await saveImageAsBase64WithResize(resultBase64, 800);
         }
-      } else {
-        // Untuk desktop, gunakan pendekatan normal
-        originalBase64 = originalImage ? await saveImageAsBase64(originalImage) : null;
-        
-        if (!resultImageUrl.startsWith('data:') && !isObjectUrl) {
-          resultBase64 = await saveImageAsBase64(resultImageUrl);
-        }
+      } catch (error) {
+        console.error('Error converting result to base64:', error);
+        // Fallback ke URL asli jika gagal konversi
+        resultBase64 = resultImageUrl;
       }
       
       // Generate ID unik
@@ -640,8 +632,8 @@ const ImageSuperscale = () => {
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             console.error("Failed to load history image");
-                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
-                            showStatus("Failed to load history image", 'error');
+                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                            showStatus("Failed to load history image - try refreshing or clearing history", 'error');
                           }}
                         />
                       </div>
