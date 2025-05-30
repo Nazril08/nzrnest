@@ -154,34 +154,34 @@ const Index = () => {
               >
                 <Card 
                   className={`group bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-600/10 backdrop-blur-sm overflow-hidden h-full`}
-                >
-                  <CardHeader className="pb-4 relative">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
-                        <tool.icon className="text-white" size={28} />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
-                          {tool.title}
-                        </CardTitle>
-                        <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
-                          {tool.category}
-                        </span>
-                      </div>
+              >
+                <CardHeader className="pb-4 relative">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
+                      <tool.icon className="text-white" size={28} />
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
-                      {tool.description}
-                    </CardDescription>
+                    <div className="flex-1">
+                      <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
+                        {tool.title}
+                      </CardTitle>
+                      <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
+                        {tool.category}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
+                    {tool.description}
+                  </CardDescription>
                     <div className="flex justify-between items-center">
                       <span className={`text-sm ${tool.path ? 'text-purple-400' : 'text-gray-500'}`}>
                         {tool.path ? 'Try Now' : 'Coming Soon'}
                       </span>
                       <ArrowRight className={`h-4 w-4 ${tool.path ? 'text-purple-400 group-hover:translate-x-1 transition-transform duration-200' : 'text-gray-500'}`} />
                     </div>
-                  </CardContent>
-                </Card>
+                </CardContent>
+              </Card>
               </Link>
             ))}
           </div>
