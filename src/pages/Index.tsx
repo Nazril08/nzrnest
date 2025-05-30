@@ -1,43 +1,59 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search } from "lucide-react";
+import { useState } from "react";
 
 const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const tools = [
     {
       title: "AI Image Upscaler",
       description: "Enhance your images with AI-powered upscaling technology. Transform low-resolution images into high-quality masterpieces.",
       icon: Image,
       image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=600&h=400",
-      featured: true
+      featured: true,
+      category: "image"
     },
     {
       title: "Text Generator",
       description: "Generate high-quality content using advanced AI language models. Perfect for blogs, articles, and creative writing.",
       icon: FileText,
+      category: "text"
     },
     {
       title: "Video Enhancer",
       description: "Improve video quality and resolution with AI-powered enhancement tools. Professional results in minutes.",
       icon: Video,
+      category: "video"
     },
     {
       title: "Audio Processing",
       description: "Advanced audio enhancement and noise reduction powered by machine learning algorithms.",
       icon: Music,
+      category: "audio"
     },
     {
       title: "Code Assistant",
       description: "AI-powered code generation and optimization tools for developers. Boost your productivity.",
       icon: Cpu,
+      category: "development"
     },
     {
       title: "Smart Analytics",
       description: "Intelligent data analysis and insights generation using cutting-edge AI technologies.",
       icon: Zap,
+      category: "analytics"
     }
   ];
+
+  const filteredTools = tools.filter(tool =>
+    tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tool.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -100,56 +116,93 @@ const Index = () => {
       </section>
 
       {/* Tools Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center mb-4">
-              <Zap className="text-purple-400 mr-2" size={20} />
-              <span className="text-purple-300 text-sm font-medium">Main Features</span>
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center mb-6">
+              <Zap className="text-purple-400 mr-2" size={24} />
+              <span className="text-purple-300 text-sm font-medium tracking-wider uppercase">Main Features</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
               Powerful AI Tools at Your Fingertips
             </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            <p className="text-gray-400 text-xl max-w-3xl mx-auto leading-relaxed mb-10">
               A Complete Solution for AI-Powered Creativity and Productivity
             </p>
+            
+            {/* Search Bar */}
+            <div className="max-w-md mx-auto relative">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Input
+                  type="text"
+                  placeholder="Search tools..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-12 pr-4 py-3 bg-white/10 border-white/20 text-white placeholder:text-gray-400 rounded-xl focus:bg-white/15 focus:border-purple-400 transition-all duration-300"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {tools.map((tool, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            {filteredTools.map((tool, index) => (
               <Card 
                 key={index} 
-                className={`bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105 backdrop-blur-sm ${
-                  tool.featured ? 'lg:col-span-2 lg:row-span-1' : ''
+                className={`group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 backdrop-blur-sm overflow-hidden ${
+                  tool.featured ? 'xl:col-span-2 xl:row-span-1' : ''
                 }`}
               >
-                <CardHeader className="pb-4">
+                <CardHeader className="pb-4 relative">
                   {tool.image && (
-                    <div className="mb-4 rounded-lg overflow-hidden">
+                    <div className="mb-6 rounded-xl overflow-hidden relative">
                       <img 
                         src={tool.image} 
                         alt={tool.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                   )}
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center">
-                      <tool.icon className="text-purple-400" size={24} />
+                  <div className="flex items-start space-x-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
+                      <tool.icon className="text-white" size={28} />
                     </div>
-                    <div>
-                      <CardTitle className="text-white text-xl">{tool.title}</CardTitle>
+                    <div className="flex-1">
+                      <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
+                        {tool.title}
+                      </CardTitle>
+                      <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
+                        {tool.category}
+                      </span>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-300 leading-relaxed">
+                <CardContent className="pt-0">
+                  <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
                     {tool.description}
                   </CardDescription>
+                  <Button 
+                    variant="ghost" 
+                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/10 p-0 h-auto font-medium group/btn"
+                  >
+                    Try Now
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {filteredTools.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="text-gray-400" size={32} />
+              </div>
+              <h3 className="text-white text-xl font-semibold mb-2">No tools found</h3>
+              <p className="text-gray-400">Try adjusting your search terms</p>
+            </div>
+          )}
         </div>
       </section>
 
