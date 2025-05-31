@@ -7,9 +7,18 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
-import { Image, Loader2, Download, RefreshCw, Upload, Link as LinkIcon, X, History, Trash2 } from "lucide-react";
+import { Image, Loader2, Download, RefreshCw, Upload, Link as LinkIcon, X, History, Trash2, Share2, FileInput } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getImageHistory, saveImageHistory, saveImageAsBase64 } from "@/lib/storage";
+import { 
+  getImageHistory, 
+  saveImageHistory, 
+  saveImageAsBase64, 
+  exportImageHistoryAsToken, 
+  importImageHistoryFromToken, 
+  mergeImageHistoryFromToken 
+} from "@/lib/storage";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // Deklarasi tipe window
 declare global {
@@ -52,6 +61,9 @@ const ImageSuperscale = () => {
   const [statusMessage, setStatusMessage] = useState<{message: string, type: 'error' | 'success' | 'info'} | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [showShareDialog, setShowShareDialog] = useState<boolean>(false);
+  const [shareToken, setShareToken] = useState<string>("");
+  const [importToken, setImportToken] = useState<string>("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -247,7 +259,7 @@ const ImageSuperscale = () => {
       }
 
       const resultUrl = responseData.result;
-      
+
       // Deteksi perangkat mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
@@ -272,14 +284,14 @@ const ImageSuperscale = () => {
         } else {
           // Untuk desktop, kita bisa menggunakan URL langsung juga
           resultImageUrl = resultUrl;
-          
-          // Update UI with enhanced image
+            
+            // Update UI with enhanced image
           setResultImage(resultImageUrl);
-          
-          // Add to history
+            
+            // Add to history
           addToHistory(resultImageUrl);
-          
-          showStatus('Image enhanced successfully!', 'success');
+            
+            showStatus('Image enhanced successfully!', 'success');
         }
       } catch (memoryError) {
         console.error('Memory error:', memoryError);
@@ -564,6 +576,121 @@ const ImageSuperscale = () => {
     setShowHistory(false); // Tutup tampilan history jika sedang terbuka
   };
 
+  // Fungsi untuk mengekspor history sebagai token
+  const handleExportHistory = () => {
+    try {
+      const token = exportImageHistoryAsToken();
+      setShareToken(token);
+      setShowShareDialog(true);
+      showStatus('History token generated successfully', 'success');
+    } catch (error) {
+      console.error('Error exporting history:', error);
+      showStatus('Failed to generate history token', 'error');
+    }
+  };
+
+  // Fungsi untuk mengimpor history dari token
+  const handleImportHistory = () => {
+    try {
+      if (!importToken.trim()) {
+        showStatus('Please enter a valid token', 'error');
+        return;
+      }
+
+      const success = mergeImageHistoryFromToken(importToken);
+      
+      if (success) {
+        // Refresh history dari localStorage
+        const savedHistory = getImageHistory();
+        if (savedHistory && Array.isArray(savedHistory)) {
+          setHistory(savedHistory);
+        }
+        
+        setImportToken('');
+        showStatus('History imported successfully', 'success');
+      } else {
+        showStatus('Invalid token or no new items to import', 'error');
+      }
+    } catch (error) {
+      console.error('Error importing history:', error);
+      showStatus('Failed to import history', 'error');
+    }
+  };
+
+  // Fungsi untuk menyalin token ke clipboard
+  const copyTokenToClipboard = () => {
+    navigator.clipboard.writeText(shareToken)
+      .then(() => {
+        showStatus('Token copied to clipboard', 'success');
+      })
+      .catch((error) => {
+        console.error('Error copying to clipboard:', error);
+        showStatus('Failed to copy token', 'error');
+      });
+  };
+
+  // Tambahkan ini di bagian render, di dekat tombol History
+  const renderHistoryDialog = () => (
+    <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Share Image History</DialogTitle>
+          <DialogDescription>
+            Copy this token and share it with others to let them import your image history.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center space-x-2">
+          <div className="grid flex-1 gap-2">
+            <Textarea
+              value={shareToken}
+              readOnly
+              className="h-20"
+            />
+          </div>
+        </div>
+        <DialogFooter className="sm:justify-start">
+          <Button type="button" variant="secondary" onClick={copyTokenToClipboard}>
+            Copy
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setShowShareDialog(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Tambahkan ini di bagian render, di dekat tombol History
+  const renderHistoryActions = () => (
+    <div className="flex flex-col sm:flex-row gap-2 mt-4">
+      <Button 
+        variant="outline" 
+        size="sm"
+        className="flex items-center gap-1"
+        onClick={handleExportHistory}
+      >
+        <Share2 className="h-4 w-4" />
+        Export History
+      </Button>
+      
+      <div className="flex flex-1 gap-2">
+        <Input
+          placeholder="Paste history token here"
+          value={importToken}
+          onChange={(e) => setImportToken(e.target.value)}
+          className="h-9"
+        />
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleImportHistory}
+        >
+          Import
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Card className="bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-300 overflow-hidden">
       <CardHeader className="pb-4">
@@ -610,6 +737,9 @@ const ImageSuperscale = () => {
                 </Button>
               )}
             </div>
+            
+            {/* Add the history actions here */}
+            {renderHistoryActions()}
             
             {history.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
@@ -950,6 +1080,9 @@ const ImageSuperscale = () => {
           Reset
         </Button>
       </CardFooter>
+      
+      {/* Add the share dialog */}
+      {renderHistoryDialog()}
     </Card>
   );
 };

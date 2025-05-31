@@ -147,4 +147,111 @@ export const saveImageAsBase64 = async (imageUrl: string): Promise<string> => {
       img.src = imageUrl;
     });
   }
+};
+
+// Fungsi untuk mengekspor data localStorage sebagai token yang bisa di-copy paste
+export const exportDataAsToken = (keys: string[] = []): string => {
+  if (typeof window === 'undefined') return '';
+  
+  const exportData: Record<string, any> = {};
+  
+  // Jika tidak ada keys yang ditentukan, ekspor semua data
+  if (keys.length === 0) {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        exportData[key] = getStorageItem(key);
+      }
+    }
+  } else {
+    // Ekspor hanya keys yang ditentukan
+    keys.forEach(key => {
+      if (hasStorageItem(key)) {
+        exportData[key] = getStorageItem(key);
+      }
+    });
+  }
+  
+  // Encode data sebagai base64 untuk membuatnya lebih mudah ditransfer
+  return btoa(JSON.stringify(exportData));
+};
+
+// Fungsi untuk mengimpor data dari token
+export const importDataFromToken = (token: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    // Decode token dari base64
+    const decodedData = JSON.parse(atob(token));
+    
+    // Simpan setiap item ke localStorage
+    Object.entries(decodedData).forEach(([key, value]) => {
+      setStorageItem(key, value);
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error importing data from token:', error);
+    return false;
+  }
+};
+
+// Fungsi untuk mengekspor data spesifik user
+export const exportUserDataAsToken = (): string => {
+  return exportDataAsToken(['user_data']);
+};
+
+// Fungsi untuk mengimpor data user dari token
+export const importUserDataFromToken = (token: string): boolean => {
+  return importDataFromToken(token);
+};
+
+// Fungsi untuk mengekspor history gambar sebagai token
+export const exportImageHistoryAsToken = (): string => {
+  return exportDataAsToken(['image_enhancer_history']);
+};
+
+// Fungsi untuk mengimpor history gambar dari token
+export const importImageHistoryFromToken = (token: string): boolean => {
+  return importDataFromToken(token);
+};
+
+// Fungsi untuk menggabungkan history gambar dari token dengan history yang sudah ada
+export const mergeImageHistoryFromToken = (token: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    // Decode token dari base64
+    const decodedData = JSON.parse(atob(token));
+    
+    // Ambil history gambar dari token
+    const importedHistory = decodedData['image_enhancer_history'] || [];
+    
+    // Ambil history gambar yang sudah ada
+    const currentHistory = getImageHistory();
+    
+    // Gabungkan history, hindari duplikat berdasarkan id atau properti unik lainnya
+    const mergedHistory = [...currentHistory];
+    
+    importedHistory.forEach((importedItem: any) => {
+      // Asumsikan setiap item memiliki id atau properti unik lainnya
+      // Sesuaikan dengan struktur data history gambar Anda
+      const isDuplicate = currentHistory.some((existingItem: any) => 
+        existingItem.id === importedItem.id || 
+        existingItem.originalImageUrl === importedItem.originalImageUrl
+      );
+      
+      if (!isDuplicate) {
+        mergedHistory.push(importedItem);
+      }
+    });
+    
+    // Simpan history yang sudah digabungkan
+    saveImageHistory(mergedHistory);
+    
+    return true;
+  } catch (error) {
+    console.error('Error merging image history from token:', error);
+    return false;
+  }
 }; 

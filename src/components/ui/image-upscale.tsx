@@ -247,7 +247,7 @@ const ImageSuperscale = () => {
       }
 
       const resultUrl = responseData.result;
-      
+
       // Deteksi perangkat mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
@@ -272,14 +272,14 @@ const ImageSuperscale = () => {
         } else {
           // Untuk desktop, kita bisa menggunakan URL langsung juga
           resultImageUrl = resultUrl;
-          
-          // Update UI with enhanced image
+            
+            // Update UI with enhanced image
           setResultImage(resultImageUrl);
-          
-          // Add to history
+            
+            // Add to history
           addToHistory(resultImageUrl);
-          
-          showStatus('Image enhanced successfully!', 'success');
+            
+            showStatus('Image enhanced successfully!', 'success');
         }
       } catch (memoryError) {
         console.error('Memory error:', memoryError);
