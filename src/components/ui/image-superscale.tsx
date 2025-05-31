@@ -7,15 +7,25 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
-import { Image, Loader2, Download, RefreshCw, Upload, Link as LinkIcon, X, History, Trash2, Share2, FileInput } from "lucide-react";
+import { Image, Loader2, Download, RefreshCw, Upload, Link as LinkIcon, X, History, Trash2, Share2, FileInput, Settings, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   getImageHistory, 
   saveImageHistory, 
   saveImageAsBase64, 
   exportImageHistoryAsToken, 
   importImageHistoryFromToken, 
-  mergeImageHistoryFromToken 
+  mergeImageHistoryFromToken,
+  exportCompactImageHistoryAsToken,
+  importDataFromCompressedToken,
+  exportSelectedImageHistoryAsToken,
+  validateToken,
+  importDataFromTokenWithMerge,
+  exportDataForWhatsApp,
+  exportAllDataAsToken,
+  exportDataByPrefixAsToken,
+  exportDataByPrefixAsCompressedToken
 } from "@/lib/storage";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,6 +74,14 @@ const ImageSuperscale = () => {
   const [showShareDialog, setShowShareDialog] = useState<boolean>(false);
   const [shareToken, setShareToken] = useState<string>("");
   const [importToken, setImportToken] = useState<string>("");
+  const [exportLimit, setExportLimit] = useState<number>(1);
+  const [includeOriginals, setIncludeOriginals] = useState<boolean>(false);
+  const [exportMode, setExportMode] = useState<'standard' | 'compact'>('standard');
+  const [historyTab, setHistoryTab] = useState<string>("items");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState<boolean>(false);
+  const [importTokenPreview, setImportTokenPreview] = useState<Record<string, any> | null>(null);
+  const [isValidatingToken, setIsValidatingToken] = useState<boolean>(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -181,6 +199,46 @@ const ImageSuperscale = () => {
     return true;
   };
   
+  // Tambahkan fungsi untuk mengakses gambar melalui proxy CORS
+  const fetchImageWithProxy = async (imageUrl: string): Promise<string> => {
+    try {
+      // Daftar proxy CORS yang bisa digunakan
+      const corsProxies = [
+        "https://corsproxy.io/?",
+        "https://api.allorigins.win/raw?url=",
+        "https://cors-anywhere.herokuapp.com/"
+      ];
+      
+      // Pilih proxy secara acak untuk menghindari rate limiting
+      const randomProxy = corsProxies[Math.floor(Math.random() * corsProxies.length)];
+      const proxiedUrl = randomProxy + encodeURIComponent(imageUrl);
+      
+      console.log("Fetching image via proxy:", proxiedUrl);
+      
+      // Coba fetch dengan proxy
+      const response = await fetch(proxiedUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image via proxy: ${response.status}`);
+      }
+      
+      // Konversi ke blob
+      const blob = await response.blob();
+      
+      // Konversi blob ke base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error fetching image with proxy:", error);
+      throw error;
+    }
+  };
+
+  // Modifikasi fungsi fetchImageFromUrl untuk menggunakan proxy
   const fetchImageFromUrl = async () => {
     if (!imageUrl) {
       showStatus("Please enter an image URL", 'error');
@@ -190,54 +248,77 @@ const ImageSuperscale = () => {
     try {
       showStatus("Fetching image...", 'info');
       
-      // Pendekatan langsung - gunakan URL gambar sebagai sumber untuk elemen img
-      // dan kemudian gambar langsung diproses untuk upscale
-      
-      // Set originalImage ke URL yang dimasukkan
-      setOriginalImage(imageUrl);
-      
-      // Untuk kompatibilitas dengan fungsi upscale, kita tetap perlu membuat
-      // objek File atau Blob, tapi kita akan melakukannya dengan cara yang berbeda
-      
-      // Buat elemen gambar untuk memverifikasi bahwa URL valid
-      const img = document.createElement('img');
-      
-      // Buat promise untuk menunggu gambar dimuat
-      const imageLoadPromise = new Promise((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Failed to load image from URL"));
-        img.crossOrigin = "anonymous"; // Penting untuk CORS
-        img.src = imageUrl;
-      });
-      
-      // Tunggu gambar dimuat
-      await imageLoadPromise;
-      
-      // Jika berhasil, kita akan menggunakan URL langsung untuk upscale
-      showStatus('Image loaded successfully!', 'success');
-      
-      // Kita tidak perlu mengubah URL menjadi File/Blob untuk upscale
-      // Cukup gunakan URL langsung
+      try {
+        // Coba akses langsung dulu
+        setOriginalImage(imageUrl);
+        
+        // Buat elemen gambar untuk memverifikasi bahwa URL valid
+        const img = document.createElement('img');
+        
+        // Buat promise untuk menunggu gambar dimuat
+        const imageLoadPromise = new Promise((resolve, reject) => {
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("Failed to load image directly, trying proxy..."));
+          img.crossOrigin = "anonymous";
+          img.src = imageUrl;
+        });
+        
+        // Tunggu gambar dimuat
+        await imageLoadPromise;
+        
+        showStatus('Image loaded successfully!', 'success');
+      } catch (directError) {
+        console.error('Direct image loading failed, trying proxy:', directError);
+        
+        // Jika gagal akses langsung, coba dengan proxy
+        try {
+          const proxiedImageUrl = await fetchImageWithProxy(imageUrl);
+          setOriginalImage(proxiedImageUrl);
+          showStatus('Image loaded via proxy!', 'success');
+        } catch (proxyError) {
+          console.error('Proxy image loading failed:', proxyError);
+          throw new Error('Failed to load image even with proxy. Please try another image URL.');
+        }
+      }
     } catch (error) {
       console.error('Error fetching image:', error);
       showStatus(error instanceof Error ? error.message : 'Failed to fetch image', 'error');
       setOriginalImage(null);
     }
   };
-  
+
+  // Modifikasi fungsi enhanceImageDirectly untuk menggunakan proxy jika diperlukan
   const enhanceImageDirectly = async (imageUrl) => {
     try {
       showStatus('Enhancing image...', 'info');
       
-      // Panggil API superscale langsung dengan URL gambar
-      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
+      // Jika URL adalah base64 (hasil dari proxy), gunakan langsung
+      let finalImageUrl = imageUrl;
+      
+      // Jika bukan base64 dan bukan blob URL, mungkin perlu proxy untuk API
+      if (!imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+        // Untuk URL API, kita bisa menggunakan URL langsung karena API berjalan di server
+        // Tapi jika API juga mengalami masalah CORS, kita perlu mengupload gambar terlebih dahulu
+        try {
+          // Coba konversi ke base64 dengan proxy jika diperlukan
+          const response = await fetch(imageUrl, { mode: 'no-cors' }).catch(() => null);
+          if (!response) {
+            // Jika gagal, coba dengan proxy
+            finalImageUrl = await fetchImageWithProxy(imageUrl);
+          }
+        } catch (error) {
+          console.log("Using direct URL for API call, proxy failed:", error);
+        }
+      }
+      
+      // Panggil API superscale dengan URL gambar
+      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(finalImageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
       
       console.log("Calling API with params:", { 
         endpoint: "superscale", 
-        imageUrl, 
+        imageUrl: finalImageUrl.substring(0, 50) + "...", // Hanya log sebagian URL untuk keamanan
         resize: resizeFactor, 
-        anime: isAnime,
-        fullUrl: apiUrl 
+        anime: isAnime
       });
       
       const response = await fetch(apiUrl, {
@@ -267,35 +348,39 @@ const ImageSuperscale = () => {
       let resultImageUrl;
       
       try {
-        // Untuk perangkat mobile, gunakan URL langsung
-        if (isMobile) { 
-          console.log("Mobile device detected, using direct URL");
-          
-          // Gunakan URL hasil langsung
+        // Untuk menghindari masalah CORS dengan hasil, coba akses langsung dulu
+        try {
           resultImageUrl = resultUrl;
           
-          // Update UI with enhanced image
-          setResultImage(resultImageUrl);
+          // Tes apakah URL hasil bisa diakses langsung
+          const testImg = document.createElement('img');
+          testImg.crossOrigin = "anonymous";
           
-          // Add to history with URL reference
-          addToHistory(resultImageUrl);
+          await new Promise((resolve, reject) => {
+            testImg.onload = resolve;
+            testImg.onerror = reject;
+            testImg.src = resultUrl;
+            
+            // Timeout setelah 3 detik
+            setTimeout(reject, 3000);
+          });
+        } catch (corsError) {
+          console.log("Result image has CORS issues, trying proxy:", corsError);
           
-          showStatus('Image enhanced successfully!', 'success');
-        } else {
-          // Untuk desktop, kita bisa menggunakan URL langsung juga
-          resultImageUrl = resultUrl;
-            
-            // Update UI with enhanced image
-          setResultImage(resultImageUrl);
-            
-            // Add to history
-          addToHistory(resultImageUrl);
-            
-            showStatus('Image enhanced successfully!', 'success');
+          // Jika ada masalah CORS, gunakan proxy
+          resultImageUrl = await fetchImageWithProxy(resultUrl);
         }
+        
+        // Update UI with enhanced image
+        setResultImage(resultImageUrl);
+        
+        // Add to history
+        addToHistory(resultImageUrl);
+        
+        showStatus('Image enhanced successfully!', 'success');
       } catch (memoryError) {
-        console.error('Memory error:', memoryError);
-        showStatus('Device memory limit reached. Try a smaller image or lower resize factor.', 'error');
+        console.error('Memory or access error:', memoryError);
+        showStatus('Issue accessing enhanced image. Try a smaller image or different URL.', 'error');
         setResultImage(null);
       }
     } catch (error) {
@@ -579,13 +664,50 @@ const ImageSuperscale = () => {
   // Fungsi untuk mengekspor history sebagai token
   const handleExportHistory = () => {
     try {
-      const token = exportImageHistoryAsToken();
+      let token;
+      
+      if (exportMode === 'compact') {
+        if (selectedImages.length > 0) {
+          // Gunakan fungsi ekspor dengan ID yang dipilih
+          token = exportSelectedImageHistoryAsToken(selectedImages, includeOriginals);
+        } else {
+          // Gunakan fungsi ekspor dengan limit dan optimasi untuk WhatsApp
+          token = exportDataForWhatsApp(['image_enhancer_history']);
+        }
+      } else {
+        token = exportImageHistoryAsToken();
+      }
+      
       setShareToken(token);
-      setShowShareDialog(true);
       showStatus('History token generated successfully', 'success');
     } catch (error) {
       console.error('Error exporting history:', error);
       showStatus('Failed to generate history token', 'error');
+    }
+  };
+
+  // Fungsi untuk mengelola pemilihan gambar
+  const toggleImageSelection = (id: string) => {
+    setSelectedImages(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(imageId => imageId !== id);
+      } else {
+        // Batasi maksimal 3 gambar yang bisa dipilih
+        if (prev.length >= 3) {
+          showStatus('Maximum 3 images can be selected', 'info');
+          return prev;
+        }
+        return [...prev, id];
+      }
+    });
+  };
+
+  // Fungsi untuk toggle mode seleksi
+  const toggleSelectionMode = () => {
+    setSelectionMode(prev => !prev);
+    // Reset pilihan saat keluar dari mode seleksi
+    if (selectionMode) {
+      setSelectedImages([]);
     }
   };
 
@@ -597,7 +719,19 @@ const ImageSuperscale = () => {
         return;
       }
 
-      const success = mergeImageHistoryFromToken(importToken);
+      // Validasi token terlebih dahulu
+      const validation = validateToken(importToken);
+      
+      if (!validation.isValid) {
+        showStatus('Invalid token format', 'error');
+        return;
+      }
+      
+      // Tampilkan preview data yang akan diimpor
+      console.log('Token data preview:', validation.dataPreview);
+      
+      // Impor data dengan opsi merge
+      const success = importDataFromTokenWithMerge(importToken, 'merge');
       
       if (success) {
         // Refresh history dari localStorage
@@ -609,7 +743,7 @@ const ImageSuperscale = () => {
         setImportToken('');
         showStatus('History imported successfully', 'success');
       } else {
-        showStatus('Invalid token or no new items to import', 'error');
+        showStatus('Failed to import data from token', 'error');
       }
     } catch (error) {
       console.error('Error importing history:', error);
@@ -629,67 +763,36 @@ const ImageSuperscale = () => {
       });
   };
 
-  // Tambahkan ini di bagian render, di dekat tombol History
-  const renderHistoryDialog = () => (
-    <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Share Image History</DialogTitle>
-          <DialogDescription>
-            Copy this token and share it with others to let them import your image history.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex items-center space-x-2">
-          <div className="grid flex-1 gap-2">
-            <Textarea
-              value={shareToken}
-              readOnly
-              className="h-20"
-            />
-          </div>
-        </div>
-        <DialogFooter className="sm:justify-start">
-          <Button type="button" variant="secondary" onClick={copyTokenToClipboard}>
-            Copy
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setShowShareDialog(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
-  // Tambahkan ini di bagian render, di dekat tombol History
-  const renderHistoryActions = () => (
-    <div className="flex flex-col sm:flex-row gap-2 mt-4">
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="flex items-center gap-1"
-        onClick={handleExportHistory}
-      >
-        <Share2 className="h-4 w-4" />
-        Export History
-      </Button>
+  // Fungsi untuk memvalidasi token dan menampilkan preview
+  const validateImportToken = () => {
+    setIsValidatingToken(true);
+    
+    try {
+      if (!importToken.trim()) {
+        showStatus('Please enter a valid token', 'error');
+        setImportTokenPreview(null);
+        setIsValidatingToken(false);
+        return;
+      }
       
-      <div className="flex flex-1 gap-2">
-        <Input
-          placeholder="Paste history token here"
-          value={importToken}
-          onChange={(e) => setImportToken(e.target.value)}
-          className="h-9"
-        />
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleImportHistory}
-        >
-          Import
-        </Button>
-      </div>
-    </div>
-  );
+      // Validasi token
+      const validation = validateToken(importToken);
+      
+      if (validation.isValid && validation.dataPreview) {
+        setImportTokenPreview(validation.dataPreview);
+        showStatus('Token validated successfully', 'success');
+      } else {
+        setImportTokenPreview(null);
+        showStatus('Invalid token format', 'error');
+      }
+    } catch (error) {
+      console.error('Error validating token:', error);
+      setImportTokenPreview(null);
+      showStatus('Failed to validate token', 'error');
+    } finally {
+      setIsValidatingToken(false);
+    }
+  };
 
   return (
     <Card className="bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-300 overflow-hidden">
@@ -726,89 +829,323 @@ const ImageSuperscale = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-white font-medium">History</h3>
-              {history.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearHistory} 
-                  className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                >
-                  Clear All
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {history.length > 0 && historyTab === "items" && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={toggleSelectionMode}
+                    className="text-purple-300 hover:text-purple-200 hover:bg-purple-900/20"
+                  >
+                    {selectionMode ? "Cancel Selection" : "Select Images"}
+                  </Button>
+                )}
+                {history.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearHistory} 
+                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
             </div>
             
-            {/* Add the history actions here */}
-            {renderHistoryActions()}
-            
-            {history.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <p>No history yet. Enhanced images will appear here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
-                {history.map((item) => (
-                  <div 
-                    key={item.id}
-                    onClick={() => loadFromHistory(item)}
-                    className="bg-white/5 border border-purple-500/20 rounded-lg p-3 cursor-pointer hover:bg-white/10 transition-colors"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-20 h-20 bg-black/30 rounded overflow-hidden flex-shrink-0">
-                        <img 
-                          src={item.resultImage} 
-                          alt="History item" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error("Failed to load history image");
-                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
-                            showStatus("Failed to load history image - try refreshing or clearing history", 'error');
-                          }}
-                        />
+            <Tabs defaultValue="items" value={historyTab} onValueChange={setHistoryTab} className="w-full">
+              <TabsList className="grid grid-cols-2 bg-white/10 border-white/20 mb-4">
+                <TabsTrigger 
+                  value="items" 
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300"
+                >
+                  History Items
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="share" 
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-300"
+                >
+                  Share History
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="items" className="space-y-4">
+                {history.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <p>No history yet. Enhanced images will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
+                    {history.map((item) => (
+                      <div 
+                        key={item.id}
+                        onClick={() => loadFromHistory(item)}
+                        className="bg-white/5 border border-purple-500/20 rounded-lg p-3 cursor-pointer hover:bg-white/10 transition-colors"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="w-20 h-20 bg-black/30 rounded overflow-hidden flex-shrink-0">
+                            <img 
+                              src={item.resultImage} 
+                              alt="History item" 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error("Failed to load history image");
+                                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                                showStatus("Failed to load history image - try refreshing or clearing history", 'error');
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm truncate">{item.name}</p>
+                            <p className="text-gray-400 text-xs mt-1">{new Date(item.timestamp).toLocaleString()}</p>
+                            <p className="text-purple-300 text-xs mt-1">{item.resizeFactor}x upscale</p>
+                          </div>
+                          <div className="flex flex-col space-y-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-gray-400 hover:text-red-300 hover:bg-red-900/20 h-8 w-8"
+                              onClick={(e) => deleteFromHistory(item.id, e)}
+                              title="Delete from history"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-gray-400 hover:text-blue-300 hover:bg-blue-900/20 h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const link = document.createElement('a');
+                                link.href = item.resultImage;
+                                link.download = `enhanced_${item.resizeFactor}x_${item.name || 'image'}.png`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                showStatus('Image downloaded successfully', 'success');
+                              }}
+                              title="Download image"
+                            >
+                              <Download size={16} />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm truncate">{item.name}</p>
-                        <p className="text-gray-400 text-xs mt-1">{new Date(item.timestamp).toLocaleString()}</p>
-                        <p className="text-purple-300 text-xs mt-1">{item.resizeFactor}x upscale</p>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="share" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="bg-white/5 border border-purple-500/20 rounded-lg p-4">
+                    <h4 className="text-white text-sm mb-2">Export History</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="export-mode" className="text-white">Export Mode</Label>
+                        <Select value={exportMode} onValueChange={(value: 'standard' | 'compact') => setExportMode(value)}>
+                          <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
+                            <SelectValue placeholder="Export Mode" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1d1040] border-[#2a1b4a] text-white">
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="compact">Compact (WhatsApp)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="flex flex-col space-y-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-gray-400 hover:text-red-300 hover:bg-red-900/20 h-8 w-8"
-                          onClick={(e) => deleteFromHistory(item.id, e)}
-                          title="Delete from history"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-gray-400 hover:text-blue-300 hover:bg-blue-900/20 h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const link = document.createElement('a');
-                            link.href = item.resultImage;
-                            link.download = `enhanced_${item.resizeFactor}x_${item.name || 'image'}.png`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            showStatus('Image downloaded successfully', 'success');
-                          }}
-                          title="Download image"
-                        >
-                          <Download size={16} />
-                        </Button>
-                      </div>
+                      
+                      {exportMode === 'compact' && (
+                        <div className="bg-blue-900/20 border border-blue-500/20 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-blue-300">
+                            <strong>Compact Mode:</strong> Optimized for sharing via WhatsApp and other messaging apps. 
+                            Includes compression and size optimization.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {exportMode === 'compact' && (
+                        <>
+                          {selectedImages.length > 0 ? (
+                            <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3">
+                              <p className="text-white text-sm">
+                                {selectedImages.length} image{selectedImages.length > 1 ? 's' : ''} selected for export
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedImages([])}
+                                  className="text-xs bg-purple-900/20 border-purple-500/30 text-purple-300 hover:bg-purple-600/10"
+                                >
+                                  Clear Selection
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="export-limit" className="text-white">Number of Images</Label>
+                              <Select 
+                                value={exportLimit.toString()} 
+                                onValueChange={(value) => setExportLimit(parseInt(value))}
+                              >
+                                <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
+                                  <SelectValue placeholder="Limit" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1d1040] border-[#2a1b4a] text-white">
+                                  <SelectItem value="1">1 image</SelectItem>
+                                  <SelectItem value="2">2 images</SelectItem>
+                                  <SelectItem value="3">3 images</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="include-originals" className="text-white">Include Original Images</Label>
+                            <Switch
+                              id="include-originals"
+                              checked={includeOriginals}
+                              onCheckedChange={setIncludeOriginals}
+                              className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-purple-900/40"
+                            />
+                          </div>
+                          
+                          <div className="flex flex-col space-y-2">
+                            <Label className="text-white">Select Images to Export (max 3)</Label>
+                            <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                              {history.slice(0, 9).map((item) => (
+                                <div 
+                                  key={item.id}
+                                  onClick={() => toggleImageSelection(item.id)}
+                                  className={`bg-white/5 border ${
+                                    selectedImages.includes(item.id) 
+                                      ? 'border-purple-400' 
+                                      : 'border-purple-500/20'
+                                  } rounded-lg p-2 cursor-pointer hover:bg-white/10 transition-colors ${
+                                    selectedImages.includes(item.id) ? 'bg-purple-900/20' : ''
+                                  }`}
+                                >
+                                  <div className="relative">
+                                    <img 
+                                      src={item.resultImage} 
+                                      alt="History item" 
+                                      className="w-full h-20 object-cover rounded"
+                                    />
+                                    <div className="absolute top-1 right-1">
+                                      <div className={`w-5 h-5 rounded-full border ${
+                                        selectedImages.includes(item.id) 
+                                          ? 'bg-purple-500 border-purple-300' 
+                                          : 'bg-white/20 border-white/40'
+                                      } flex items-center justify-center`}>
+                                        {selectedImages.includes(item.id) && (
+                                          <Check className="text-white" size={12} />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-white truncate mt-1">{item.name}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      <Button 
+                        onClick={handleExportHistory}
+                        className="w-full bg-purple-600 hover:bg-purple-500 text-white border-purple-600/30"
+                      >
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Generate Token
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  
+                  <div className="bg-white/5 border border-purple-500/20 rounded-lg p-4">
+                    <h4 className="text-white text-sm mb-2">Import History</h4>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Paste history token here"
+                        value={importToken}
+                        onChange={(e) => {
+                          setImportToken(e.target.value);
+                          // Reset preview saat token berubah
+                          setImportTokenPreview(null);
+                        }}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      />
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={validateImportToken}
+                          className="flex-1 bg-purple-600/70 hover:bg-purple-500 text-white border-purple-600/30"
+                          disabled={!importToken.trim() || isValidatingToken}
+                        >
+                          {isValidatingToken ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Validating...
+                            </>
+                          ) : (
+                            'Validate Token'
+                          )}
+                        </Button>
+                        
+                        <Button 
+                          onClick={handleImportHistory}
+                          className="flex-1 bg-purple-600 hover:bg-purple-500 text-white border-purple-600/30"
+                          disabled={!importToken.trim()}
+                        >
+                          Import History
+                        </Button>
+                      </div>
+                      
+                      {importTokenPreview && (
+                        <div className="mt-2 p-3 bg-purple-900/20 border border-purple-500/20 rounded-lg">
+                          <h5 className="text-white text-xs font-medium mb-2">Token Preview:</h5>
+                          <div className="max-h-40 overflow-y-auto text-xs">
+                            {Object.entries(importTokenPreview).map(([key, value]) => (
+                              <div key={key} className="mb-1">
+                                <span className="text-purple-300">{key}:</span> <span className="text-white">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {shareToken && (
+                    <div className="bg-white/5 border border-purple-500/20 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-white text-sm">Your Token</h4>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={copyTokenToClipboard}
+                          className="text-purple-300 hover:text-purple-200 hover:bg-purple-900/20"
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={shareToken}
+                        readOnly
+                        className="h-20 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
             
             <Button 
               variant="outline" 
-              onClick={() => setShowHistory(false)}
+              onClick={() => {
+                setShowHistory(false);
+                setSelectionMode(false);
+                setSelectedImages([]);
+              }}
               className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-600/10 hover:text-purple-200"
             >
               Back to Enhancer
@@ -1080,9 +1417,6 @@ const ImageSuperscale = () => {
           Reset
         </Button>
       </CardFooter>
-      
-      {/* Add the share dialog */}
-      {renderHistoryDialog()}
     </Card>
   );
 };
