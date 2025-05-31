@@ -19,13 +19,7 @@ import {
   mergeImageHistoryFromToken,
   exportCompactImageHistoryAsToken,
   importDataFromCompressedToken,
-  exportSelectedImageHistoryAsToken,
-  validateToken,
-  importDataFromTokenWithMerge,
-  exportDataForWhatsApp,
-  exportAllDataAsToken,
-  exportDataByPrefixAsToken,
-  exportDataByPrefixAsCompressedToken
+  exportSelectedImageHistoryAsToken
 } from "@/lib/storage";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,8 +74,6 @@ const ImageSuperscale = () => {
   const [historyTab, setHistoryTab] = useState<string>("items");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
-  const [importTokenPreview, setImportTokenPreview] = useState<Record<string, any> | null>(null);
-  const [isValidatingToken, setIsValidatingToken] = useState<boolean>(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -199,46 +191,6 @@ const ImageSuperscale = () => {
     return true;
   };
   
-  // Tambahkan fungsi untuk mengakses gambar melalui proxy CORS
-  const fetchImageWithProxy = async (imageUrl: string): Promise<string> => {
-    try {
-      // Daftar proxy CORS yang bisa digunakan
-      const corsProxies = [
-        "https://corsproxy.io/?",
-        "https://api.allorigins.win/raw?url=",
-        "https://cors-anywhere.herokuapp.com/"
-      ];
-      
-      // Pilih proxy secara acak untuk menghindari rate limiting
-      const randomProxy = corsProxies[Math.floor(Math.random() * corsProxies.length)];
-      const proxiedUrl = randomProxy + encodeURIComponent(imageUrl);
-      
-      console.log("Fetching image via proxy:", proxiedUrl);
-      
-      // Coba fetch dengan proxy
-      const response = await fetch(proxiedUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image via proxy: ${response.status}`);
-      }
-      
-      // Konversi ke blob
-      const blob = await response.blob();
-      
-      // Konversi blob ke base64
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Error fetching image with proxy:", error);
-      throw error;
-    }
-  };
-
-  // Modifikasi fungsi fetchImageFromUrl untuk menggunakan proxy
   const fetchImageFromUrl = async () => {
     if (!imageUrl) {
       showStatus("Please enter an image URL", 'error');
@@ -248,77 +200,54 @@ const ImageSuperscale = () => {
     try {
       showStatus("Fetching image...", 'info');
       
-      try {
-        // Coba akses langsung dulu
-        setOriginalImage(imageUrl);
-        
-        // Buat elemen gambar untuk memverifikasi bahwa URL valid
-        const img = document.createElement('img');
-        
-        // Buat promise untuk menunggu gambar dimuat
-        const imageLoadPromise = new Promise((resolve, reject) => {
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error("Failed to load image directly, trying proxy..."));
-          img.crossOrigin = "anonymous";
-          img.src = imageUrl;
-        });
-        
-        // Tunggu gambar dimuat
-        await imageLoadPromise;
-        
-        showStatus('Image loaded successfully!', 'success');
-      } catch (directError) {
-        console.error('Direct image loading failed, trying proxy:', directError);
-        
-        // Jika gagal akses langsung, coba dengan proxy
-        try {
-          const proxiedImageUrl = await fetchImageWithProxy(imageUrl);
-          setOriginalImage(proxiedImageUrl);
-          showStatus('Image loaded via proxy!', 'success');
-        } catch (proxyError) {
-          console.error('Proxy image loading failed:', proxyError);
-          throw new Error('Failed to load image even with proxy. Please try another image URL.');
-        }
-      }
+      // Pendekatan langsung - gunakan URL gambar sebagai sumber untuk elemen img
+      // dan kemudian gambar langsung diproses untuk upscale
+      
+      // Set originalImage ke URL yang dimasukkan
+      setOriginalImage(imageUrl);
+      
+      // Untuk kompatibilitas dengan fungsi upscale, kita tetap perlu membuat
+      // objek File atau Blob, tapi kita akan melakukannya dengan cara yang berbeda
+      
+      // Buat elemen gambar untuk memverifikasi bahwa URL valid
+      const img = document.createElement('img');
+      
+      // Buat promise untuk menunggu gambar dimuat
+      const imageLoadPromise = new Promise((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Failed to load image from URL"));
+        img.crossOrigin = "anonymous"; // Penting untuk CORS
+        img.src = imageUrl;
+      });
+      
+      // Tunggu gambar dimuat
+      await imageLoadPromise;
+      
+      // Jika berhasil, kita akan menggunakan URL langsung untuk upscale
+      showStatus('Image loaded successfully!', 'success');
+      
+      // Kita tidak perlu mengubah URL menjadi File/Blob untuk upscale
+      // Cukup gunakan URL langsung
     } catch (error) {
       console.error('Error fetching image:', error);
       showStatus(error instanceof Error ? error.message : 'Failed to fetch image', 'error');
       setOriginalImage(null);
     }
   };
-
-  // Modifikasi fungsi enhanceImageDirectly untuk menggunakan proxy jika diperlukan
+  
   const enhanceImageDirectly = async (imageUrl) => {
     try {
       showStatus('Enhancing image...', 'info');
       
-      // Jika URL adalah base64 (hasil dari proxy), gunakan langsung
-      let finalImageUrl = imageUrl;
-      
-      // Jika bukan base64 dan bukan blob URL, mungkin perlu proxy untuk API
-      if (!imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
-        // Untuk URL API, kita bisa menggunakan URL langsung karena API berjalan di server
-        // Tapi jika API juga mengalami masalah CORS, kita perlu mengupload gambar terlebih dahulu
-        try {
-          // Coba konversi ke base64 dengan proxy jika diperlukan
-          const response = await fetch(imageUrl, { mode: 'no-cors' }).catch(() => null);
-          if (!response) {
-            // Jika gagal, coba dengan proxy
-            finalImageUrl = await fetchImageWithProxy(imageUrl);
-          }
-        } catch (error) {
-          console.log("Using direct URL for API call, proxy failed:", error);
-        }
-      }
-      
-      // Panggil API superscale dengan URL gambar
-      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(finalImageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
+      // Panggil API superscale langsung dengan URL gambar
+      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
       
       console.log("Calling API with params:", { 
         endpoint: "superscale", 
-        imageUrl: finalImageUrl.substring(0, 50) + "...", // Hanya log sebagian URL untuk keamanan
+        imageUrl, 
         resize: resizeFactor, 
-        anime: isAnime
+        anime: isAnime,
+        fullUrl: apiUrl 
       });
       
       const response = await fetch(apiUrl, {
@@ -348,39 +277,35 @@ const ImageSuperscale = () => {
       let resultImageUrl;
       
       try {
-        // Untuk menghindari masalah CORS dengan hasil, coba akses langsung dulu
-        try {
+        // Untuk perangkat mobile, gunakan URL langsung
+        if (isMobile) { 
+          console.log("Mobile device detected, using direct URL");
+          
+          // Gunakan URL hasil langsung
           resultImageUrl = resultUrl;
           
-          // Tes apakah URL hasil bisa diakses langsung
-          const testImg = document.createElement('img');
-          testImg.crossOrigin = "anonymous";
+          // Update UI with enhanced image
+          setResultImage(resultImageUrl);
           
-          await new Promise((resolve, reject) => {
-            testImg.onload = resolve;
-            testImg.onerror = reject;
-            testImg.src = resultUrl;
+          // Add to history with URL reference
+          addToHistory(resultImageUrl);
+          
+          showStatus('Image enhanced successfully!', 'success');
+        } else {
+          // Untuk desktop, kita bisa menggunakan URL langsung juga
+          resultImageUrl = resultUrl;
             
-            // Timeout setelah 3 detik
-            setTimeout(reject, 3000);
-          });
-        } catch (corsError) {
-          console.log("Result image has CORS issues, trying proxy:", corsError);
-          
-          // Jika ada masalah CORS, gunakan proxy
-          resultImageUrl = await fetchImageWithProxy(resultUrl);
+            // Update UI with enhanced image
+          setResultImage(resultImageUrl);
+            
+            // Add to history
+          addToHistory(resultImageUrl);
+            
+            showStatus('Image enhanced successfully!', 'success');
         }
-        
-        // Update UI with enhanced image
-        setResultImage(resultImageUrl);
-        
-        // Add to history
-        addToHistory(resultImageUrl);
-        
-        showStatus('Image enhanced successfully!', 'success');
       } catch (memoryError) {
-        console.error('Memory or access error:', memoryError);
-        showStatus('Issue accessing enhanced image. Try a smaller image or different URL.', 'error');
+        console.error('Memory error:', memoryError);
+        showStatus('Device memory limit reached. Try a smaller image or lower resize factor.', 'error');
         setResultImage(null);
       }
     } catch (error) {
@@ -671,8 +596,8 @@ const ImageSuperscale = () => {
           // Gunakan fungsi ekspor dengan ID yang dipilih
           token = exportSelectedImageHistoryAsToken(selectedImages, includeOriginals);
         } else {
-          // Gunakan fungsi ekspor dengan limit dan optimasi untuk WhatsApp
-          token = exportDataForWhatsApp(['image_enhancer_history']);
+          // Gunakan fungsi ekspor dengan limit
+          token = exportCompactImageHistoryAsToken(exportLimit, includeOriginals);
         }
       } else {
         token = exportImageHistoryAsToken();
@@ -719,19 +644,15 @@ const ImageSuperscale = () => {
         return;
       }
 
-      // Validasi token terlebih dahulu
-      const validation = validateToken(importToken);
+      let success;
       
-      if (!validation.isValid) {
-        showStatus('Invalid token format', 'error');
-        return;
+      // Coba impor dengan format terkompresi terlebih dahulu
+      try {
+        success = importDataFromCompressedToken(importToken);
+      } catch (e) {
+        // Jika gagal, coba dengan format standar
+        success = mergeImageHistoryFromToken(importToken);
       }
-      
-      // Tampilkan preview data yang akan diimpor
-      console.log('Token data preview:', validation.dataPreview);
-      
-      // Impor data dengan opsi merge
-      const success = importDataFromTokenWithMerge(importToken, 'merge');
       
       if (success) {
         // Refresh history dari localStorage
@@ -743,7 +664,7 @@ const ImageSuperscale = () => {
         setImportToken('');
         showStatus('History imported successfully', 'success');
       } else {
-        showStatus('Failed to import data from token', 'error');
+        showStatus('Invalid token or no new items to import', 'error');
       }
     } catch (error) {
       console.error('Error importing history:', error);
@@ -761,37 +682,6 @@ const ImageSuperscale = () => {
         console.error('Error copying to clipboard:', error);
         showStatus('Failed to copy token', 'error');
       });
-  };
-
-  // Fungsi untuk memvalidasi token dan menampilkan preview
-  const validateImportToken = () => {
-    setIsValidatingToken(true);
-    
-    try {
-      if (!importToken.trim()) {
-        showStatus('Please enter a valid token', 'error');
-        setImportTokenPreview(null);
-        setIsValidatingToken(false);
-        return;
-      }
-      
-      // Validasi token
-      const validation = validateToken(importToken);
-      
-      if (validation.isValid && validation.dataPreview) {
-        setImportTokenPreview(validation.dataPreview);
-        showStatus('Token validated successfully', 'success');
-      } else {
-        setImportTokenPreview(null);
-        showStatus('Invalid token format', 'error');
-      }
-    } catch (error) {
-      console.error('Error validating token:', error);
-      setImportTokenPreview(null);
-      showStatus('Failed to validate token', 'error');
-    } finally {
-      setIsValidatingToken(false);
-    }
   };
 
   return (
@@ -955,15 +845,6 @@ const ImageSuperscale = () => {
                       </div>
                       
                       {exportMode === 'compact' && (
-                        <div className="bg-blue-900/20 border border-blue-500/20 rounded-lg p-3 mt-2">
-                          <p className="text-xs text-blue-300">
-                            <strong>Compact Mode:</strong> Optimized for sharing via WhatsApp and other messaging apps. 
-                            Includes compression and size optimization.
-                          </p>
-                        </div>
-                      )}
-                      
-                      {exportMode === 'compact' && (
                         <>
                           {selectedImages.length > 0 ? (
                             <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3">
@@ -1067,51 +948,16 @@ const ImageSuperscale = () => {
                       <Input
                         placeholder="Paste history token here"
                         value={importToken}
-                        onChange={(e) => {
-                          setImportToken(e.target.value);
-                          // Reset preview saat token berubah
-                          setImportTokenPreview(null);
-                        }}
+                        onChange={(e) => setImportToken(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                       />
-                      
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={validateImportToken}
-                          className="flex-1 bg-purple-600/70 hover:bg-purple-500 text-white border-purple-600/30"
-                          disabled={!importToken.trim() || isValidatingToken}
-                        >
-                          {isValidatingToken ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Validating...
-                            </>
-                          ) : (
-                            'Validate Token'
-                          )}
-                        </Button>
-                        
-                        <Button 
-                          onClick={handleImportHistory}
-                          className="flex-1 bg-purple-600 hover:bg-purple-500 text-white border-purple-600/30"
-                          disabled={!importToken.trim()}
-                        >
-                          Import History
-                        </Button>
-                      </div>
-                      
-                      {importTokenPreview && (
-                        <div className="mt-2 p-3 bg-purple-900/20 border border-purple-500/20 rounded-lg">
-                          <h5 className="text-white text-xs font-medium mb-2">Token Preview:</h5>
-                          <div className="max-h-40 overflow-y-auto text-xs">
-                            {Object.entries(importTokenPreview).map(([key, value]) => (
-                              <div key={key} className="mb-1">
-                                <span className="text-purple-300">{key}:</span> <span className="text-white">{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <Button 
+                        onClick={handleImportHistory}
+                        className="w-full bg-purple-600 hover:bg-purple-500 text-white border-purple-600/30"
+                        disabled={!importToken.trim()}
+                      >
+                        Import History
+                      </Button>
                     </div>
                   </div>
                   
@@ -1146,7 +992,7 @@ const ImageSuperscale = () => {
                 setSelectionMode(false);
                 setSelectedImages([]);
               }}
-              className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-600/10 hover:text-purple-200"
+              className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-600/10 hover:text-purple-200 bg-purple-900/20"
             >
               Back to Enhancer
             </Button>
