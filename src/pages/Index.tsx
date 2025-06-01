@@ -18,14 +18,6 @@ const Index = () => {
       path: "/image-superscale"
     },
     {
-      title: "AI Background Remover",
-      description: "Remove backgrounds from your images instantly with AI technology. Get transparent PNG images with just one click.",
-      icon: Image,
-      featured: false,
-      category: "image",
-      path: "/image-removebg"
-    },
-    {
       title: "Text Generator",
       description: "Generate high-quality content using advanced AI language models. Perfect for blogs, articles, and creative writing.",
       icon: FileText,
@@ -162,7 +154,7 @@ const Index = () => {
               >
                 <Card 
                   className={`group bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-600/10 backdrop-blur-sm overflow-hidden h-full`}
-                >
+              >
                 <CardHeader className="pb-4 relative">
                   <div className="flex items-start space-x-4">
                     <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
