@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Clock } from 'lucide-react';
 
 interface BuilderStatusProps {
   builders: Builder[];
@@ -81,12 +83,76 @@ export default function BuilderStatus({
     saveToStorage(newBuilders);
   };
 
+  // Set builder time to current time
+  const setBuilderToCurrentTime = (index: number) => {
+    const newBuilders = [...builders];
+    const builder = newBuilders[index];
+    
+    // Get current time
+    const now = new Date();
+    
+    // If the builder has a current task, we'll keep that and just update the time
+    if (builder.status === 'busy') {
+      // Calculate the time difference between now and availableAt
+      const availableAt = new Date(builder.availableAt);
+      const diffMs = availableAt.getTime() - now.getTime();
+      
+      // Only update if the time is in the future
+      if (diffMs > 0) {
+        // Convert to days, hours, minutes
+        const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+        
+        // Update input values with accurate time
+        builder.inputValues = {
+          days,
+          hours,
+          minutes
+        };
+        
+        // Show toast or alert to notify user
+        if (typeof window !== 'undefined') {
+          alert('Waktu builder telah diperbarui ke waktu sekarang!');
+        }
+      } else {
+        // If the time is in the past, set the builder to idle
+        builder.status = 'idle';
+        builder.availableAt = now;
+        builder.inputValues = null;
+        builder.currentTask = null;
+        
+        // Show toast or alert to notify user
+        if (typeof window !== 'undefined') {
+          alert('Builder telah selesai dan sekarang tersedia!');
+        }
+      }
+    }
+    
+    setBuilders(newBuilders);
+    saveToStorage(newBuilders);
+  };
+
   // Update builder current task
   const updateBuilderTask = (index: number, task: string) => {
     const newBuilders = [...builders];
     newBuilders[index].currentTask = task;
     setBuilders(newBuilders);
     saveToStorage(newBuilders);
+  };
+
+  // Format date to readable string
+  const formatDate = (date: Date): string => {
+    // Format: "DD MMM YYYY, HH:MM"
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    };
+    return new Intl.DateTimeFormat('id-ID', options).format(date);
   };
 
   // Get builder remaining time in days, hours, minutes
@@ -195,45 +261,76 @@ export default function BuilderStatus({
               </div>
             </RadioGroup>
             
-            <div className={`grid grid-cols-3 gap-2 ${builder.status === 'busy' ? '' : 'opacity-50 pointer-events-none'}`}>
-              <div className="relative">
-                <Input
-                  id={`builder${index}_days`}
-                  type="number"
-                  placeholder="0"
-                  min={0}
-                  value={getBuilderRemainingTime(builder).days > 0 ? getBuilderRemainingTime(builder).days : ''}
-                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'days', parseInt(e.target.value) || 0)}
-                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Hari</span>
+            <div className={`${builder.status === 'busy' ? '' : 'opacity-50 pointer-events-none'}`}>
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm text-gray-300">Waktu selesai:</div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setBuilderToCurrentTime(index)}
+                        className="h-7 px-2 py-1 text-xs bg-[#2a1b4a]/60 border-purple-500/50 text-purple-300 hover:bg-[#2a1b4a] hover:text-purple-200"
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        Set Waktu Sekarang
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-[#1d1040] border-[#2a1b4a] text-white">
+                      <p>Mengatur waktu berdasarkan waktu saat ini untuk akurasi lebih tinggi</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-              <div className="relative">
-                <Input
-                  id={`builder${index}_hours`}
-                  type="number"
-                  placeholder="0"
-                  min={0}
-                  max={23}
-                  value={getBuilderRemainingTime(builder).hours > 0 ? getBuilderRemainingTime(builder).hours : ''}
-                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'hours', parseInt(e.target.value) || 0)}
-                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Jam</span>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="relative">
+                  <Input
+                    id={`builder${index}_days`}
+                    type="number"
+                    placeholder="0"
+                    min={0}
+                    value={getBuilderRemainingTime(builder).days > 0 ? getBuilderRemainingTime(builder).days : ''}
+                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'days', parseInt(e.target.value) || 0)}
+                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Hari</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id={`builder${index}_hours`}
+                    type="number"
+                    placeholder="0"
+                    min={0}
+                    max={23}
+                    value={getBuilderRemainingTime(builder).hours > 0 ? getBuilderRemainingTime(builder).hours : ''}
+                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'hours', parseInt(e.target.value) || 0)}
+                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Jam</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id={`builder${index}_minutes`}
+                    type="number"
+                    placeholder="0"
+                    min={0}
+                    max={59}
+                    value={getBuilderRemainingTime(builder).minutes > 0 ? getBuilderRemainingTime(builder).minutes : ''}
+                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'minutes', parseInt(e.target.value) || 0)}
+                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Menit</span>
+                </div>
               </div>
-              <div className="relative">
-                <Input
-                  id={`builder${index}_minutes`}
-                  type="number"
-                  placeholder="0"
-                  min={0}
-                  max={59}
-                  value={getBuilderRemainingTime(builder).minutes > 0 ? getBuilderRemainingTime(builder).minutes : ''}
-                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'minutes', parseInt(e.target.value) || 0)}
-                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Menit</span>
-              </div>
+              
+              {/* Add completion date display */}
+              {builder.status === 'busy' && (
+                <div className="mt-2 text-xs text-center">
+                  <span className="text-gray-400">Selesai pada: </span>
+                  <span className="text-amber-300 font-medium">{formatDate(new Date(builder.availableAt))}</span>
+                </div>
+              )}
             </div>
             
             <div className={builder.status === 'busy' ? '' : 'hidden'}>
