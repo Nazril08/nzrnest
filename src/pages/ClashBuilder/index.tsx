@@ -5,6 +5,7 @@ import BuildingForm from './BuildingForm';
 import BuildingQueue from './BuildingQueue';
 import Schedule from './Schedule';
 import Timeline from './Timeline';
+import TownHallBuildings from './TownHallBuildings';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -596,6 +597,13 @@ export default function ClashBuilder() {
             </Card>
           </div>
         </div>
+
+        {/* Town Hall Buildings Section */}
+        <TownHallBuildings 
+          buildings={buildings}
+          setBuildings={setBuildings}
+          saveToLocalStorage={(b) => saveToStorage(builders, b, schedule, userBuilderCount, selectedScheduleTasks, firstCheckedTaskIndices)}
+        />
       </div>
     </div>
   );
