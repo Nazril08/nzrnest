@@ -1,8 +1,8 @@
-import ImageSuperscale from "@/components/ui/image-superscale";
+import ImageRemoveBg from "@/components/ui/image-removebg";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const ImageSuperscalePage = () => {
+const ImageRemoveBgPage = () => {
   return (
     <div className="min-h-screen bg-purple-gradient">
       {/* Navigation */}
@@ -39,24 +39,39 @@ const ImageSuperscalePage = () => {
         <div className="max-w-4xl mx-auto">
           <div className="mb-12 text-center">
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              AI Image Enhancer 
+              AI Background Remover
             </h1>
             <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-              Transform your images into high-quality masterpieces with  AI technology.
+              Remove backgrounds from your images instantly with AI technology.
             </p>
           </div>
           
-          <ImageSuperscale />
+          <ImageRemoveBg />
           
           <div className="mt-12 text-center">
             <p className="text-gray-400 text-sm">
-              This tool uses Waifu2x AI models to enhance image quality. Results may vary depending on the input image quality.
+              This tool uses advanced AI models to remove backgrounds from images. Results may vary depending on the input image quality.
             </p>
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-[#2a1b4a] py-12 px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">N</span>
+              </div>
+              <span className="text-white text-xl font-bold">NzrNest</span>
+            </div>
+            <p className="text-gray-400">© 2025 NzrNest. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
 
-export default ImageSuperscalePage; 
+export default ImageRemoveBgPage; 

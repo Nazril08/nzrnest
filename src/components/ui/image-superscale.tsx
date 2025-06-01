@@ -74,10 +74,22 @@ const ImageSuperscale = () => {
   const [historyTab, setHistoryTab] = useState<string>("items");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
+  const [apiProvider, setApiProvider] = useState<'superscale' | 'remini'>('superscale');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const resizeOptions = ["2", "4", "6", "8", "16"];
+  const reminiResizeOptions = ["2", "4"];
+  
+  // Get the appropriate resize options based on selected API
+  const currentResizeOptions = apiProvider === 'remini' ? reminiResizeOptions : resizeOptions;
+  
+  // Ensure resize factor is valid for the selected API
+  useEffect(() => {
+    if (apiProvider === 'remini' && !reminiResizeOptions.includes(resizeFactor)) {
+      setResizeFactor('2');
+    }
+  }, [apiProvider, resizeFactor]);
   
   // Load history dari localStorage saat komponen mount
   useEffect(() => {
@@ -239,11 +251,18 @@ const ImageSuperscale = () => {
     try {
       showStatus('Enhancing image...', 'info');
       
-      // Panggil API superscale langsung dengan URL gambar
-      const apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
+      let apiUrl;
+      
+      if (apiProvider === 'remini') {
+        // Remini API
+        apiUrl = `hhttps://api.ryzumi.vip/api/ai/remini?url=${encodeURIComponent(imageUrl)}&scale=${resizeFactor}`;
+      } else {
+        // Superscale API (original)
+        apiUrl = `https://fastrestapis.fasturl.cloud/aiimage/superscale?imageUrl=${encodeURIComponent(imageUrl)}&resize=${resizeFactor}&anime=${isAnime}`;
+      }
       
       console.log("Calling API with params:", { 
-        endpoint: "superscale", 
+        endpoint: apiProvider,
         imageUrl, 
         resize: resizeFactor, 
         anime: isAnime,
@@ -264,11 +283,20 @@ const ImageSuperscale = () => {
       // Get the response JSON
       const responseData = await response.json();
       
-      if (!responseData || !responseData.result) {
-        throw new Error('Invalid response from API');
+      let resultUrl;
+      if (apiProvider === 'remini') {
+        // Remini API response structure
+        if (!responseData || !responseData.result) {
+          throw new Error('Invalid response from Remini API');
+        }
+        resultUrl = responseData.result;
+      } else {
+        // Superscale API response structure
+        if (!responseData || !responseData.result) {
+          throw new Error('Invalid response from Superscale API');
+        }
+        resultUrl = responseData.result;
       }
-
-      const resultUrl = responseData.result;
 
       // Deteksi perangkat mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -584,6 +612,7 @@ const ImageSuperscale = () => {
     setIsAnime(false);
     setApiKey("");
     setShowHistory(false); // Tutup tampilan history jika sedang terbuka
+    // Don't reset API provider to maintain user's preference
   };
 
   // Fungsi untuk mengekspor history sebagai token
@@ -1118,34 +1147,54 @@ const ImageSuperscale = () => {
             </Tabs>
             
             <div className="space-y-2">
+              <Label htmlFor="api-provider" className="text-white">API Provider</Label>
+              <Select value={apiProvider} onValueChange={(value: 'superscale' | 'remini') => setApiProvider(value)}>
+                <SelectTrigger className="bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-purple-400">
+                  <SelectValue placeholder="Select API provider" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1d1040] border-[#2a1b4a] text-white">
+                  <SelectItem value="superscale">Superscale API</SelectItem>
+                  <SelectItem value="remini">Remini API</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-400">Choose which API to use for image enhancement</p>
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="resize-factor" className="text-white">Resize Factor</Label>
               <Select value={resizeFactor} onValueChange={setResizeFactor}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-purple-400">
                   <SelectValue placeholder="Select resize factor" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1d1040] border-[#2a1b4a] text-white">
-                  {resizeOptions.map((option) => (
+                  {currentResizeOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}x
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-400">Select how much to upscale the image (2x, 4x, 6x, 8x, or 16x)</p>
+              <p className="text-xs text-gray-400">
+                {apiProvider === 'remini' 
+                  ? "Remini API supports 2x and 4x upscaling" 
+                  : "Select how much to upscale the image (2x, 4x, 6x, 8x, or 16x)"}
+              </p>
             </div>
             
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="anime-toggle" className="text-white">Anime Style</Label>
-                <Switch
-                  id="anime-toggle"
-                  checked={isAnime}
-                  onCheckedChange={setIsAnime}
-                  className="data-[state=checked]:bg-purple-600"
-                />
+            {apiProvider === 'superscale' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="anime-toggle" className="text-white">Anime Style</Label>
+                  <Switch
+                    id="anime-toggle"
+                    checked={isAnime}
+                    onCheckedChange={setIsAnime}
+                    className="data-[state=checked]:bg-purple-600"
+                  />
+                </div>
+                <p className="text-xs text-gray-400">Enable for better results with anime/cartoon images</p>
               </div>
-              <p className="text-xs text-gray-400">Enable for better results with anime/cartoon images</p>
-            </div>
+            )}
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
