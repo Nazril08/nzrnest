@@ -1,21 +1,49 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { LucideIcon } from "lucide-react";
+
+type IconType = LucideIcon | (() => JSX.Element);
+
+interface Tool {
+  title: string;
+  description: string;
+  icon: IconType;
+  featured?: boolean;
+  category: string;
+  path?: string;
+  badge?: string;
+}
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const tools = [
+  const tools: Tool[] = [
     {
-      title: "AI Image Enhancer",
-      description: "Enhance your images with Waifu2x AI technology. Transform low-resolution images into high-quality masterpieces.",
+      title: "Image Superscaler",
+      description: "Enhance your images with AI super resolution",
       icon: Image,
       featured: false,
       category: "image",
-      path: "/image-superscale"
+      path: "/image-superscale",
+      badge: "ML"
+    },
+    {
+      title: "COC Builder Planner",
+      description: "Optimize your Clash of Clans upgrade schedule",
+      icon: () => (
+        <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      ),
+      category: "tool",
+      path: "/clash-builder",
+      badge: "Tool"
     },
     {
       title: "Text Generator",
@@ -145,45 +173,60 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-            {filteredTools.map((tool, index) => (
-              <Link 
-                to={tool.path || "#"} 
-                key={index} 
-                className={tool.path ? "cursor-pointer" : "cursor-not-allowed"}
-              >
-                <Card 
-                  className={`group bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-600/10 backdrop-blur-sm overflow-hidden h-full`}
-              >
-                <CardHeader className="pb-4 relative">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
-                      <tool.icon className="text-white" size={28} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-8">
+            {filteredTools.map((tool, index) => {
+              // Render icon based on type
+              const IconComponent = typeof tool.icon === 'function' 
+                ? tool.icon 
+                : (props: any) => {
+                    const Icon = tool.icon as LucideIcon;
+                    return <Icon {...props} />;
+                  };
+                  
+              return (
+                <Link 
+                  to={tool.path || "#"} 
+                  key={index} 
+                  className={tool.path ? "cursor-pointer" : "cursor-not-allowed"}
+                >
+                  <Card 
+                    className={`group bg-[#150b30]/70 border-[#2a1b4a] hover:bg-[#1d1040]/90 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-600/10 backdrop-blur-sm overflow-hidden h-full`}
+                  >
+                  <CardHeader className="pb-4 relative">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-shadow duration-300">
+                        <IconComponent size={28} className="text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
+                          {tool.title}
+                        </CardTitle>
+                        <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
+                          {tool.category}
+                        </span>
+                        {tool.badge && (
+                          <span className="inline-block ml-2 px-3 py-1 bg-gray-600/20 text-gray-300 text-xs font-medium rounded-full border border-gray-500/30">
+                            {tool.badge}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-white text-xl mb-2 group-hover:text-purple-300 transition-colors duration-300">
-                        {tool.title}
-                      </CardTitle>
-                      <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30">
-                        {tool.category}
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
-                    {tool.description}
-                  </CardDescription>
-                    <div className="flex justify-between items-center">
-                      <span className={`text-sm ${tool.path ? 'text-purple-400' : 'text-gray-500'}`}>
-                        {tool.path ? 'Try Now' : 'Coming Soon'}
-                      </span>
-                      <ArrowRight className={`h-4 w-4 ${tool.path ? 'text-purple-400 group-hover:translate-x-1 transition-transform duration-200' : 'text-gray-500'}`} />
-                    </div>
-                </CardContent>
-              </Card>
-              </Link>
-            ))}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <CardDescription className="text-gray-300 leading-relaxed text-base mb-4">
+                      {tool.description}
+                    </CardDescription>
+                      <div className="flex justify-between items-center">
+                        <span className={`text-sm ${tool.path ? 'text-purple-400' : 'text-gray-500'}`}>
+                          {tool.path ? 'Try Now' : 'Coming Soon'}
+                        </span>
+                        <ArrowRight className={`h-4 w-4 ${tool.path ? 'text-purple-400 group-hover:translate-x-1 transition-transform duration-200' : 'text-gray-500'}`} />
+                      </div>
+                  </CardContent>
+                </Card>
+                </Link>
+              );
+            })}
           </div>
 
           {filteredTools.length === 0 && (

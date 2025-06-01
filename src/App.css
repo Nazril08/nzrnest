@@ -40,3 +40,62 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Remove spinner from number inputs */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
+/* Builder card styles */
+.builder-card {
+  transition: all 0.3s ease;
+}
+
+.builder-busy {
+  background-color: rgba(254, 249, 195, 0.5);
+  border: 1px solid rgba(254, 240, 138, 0.5);
+}
+
+.builder-available {
+  background-color: rgba(240, 253, 244, 0.5);
+  border: 1px solid rgba(187, 247, 208, 0.5);
+}
+
+/* Input focus styles */
+.input-focus:focus {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip[data-tip]:before {
+  content: attr(data-tip);
+  position: absolute;
+  background-color: rgba(55, 65, 81, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.tooltip[data-tip]:hover:before {
+  opacity: 1;
+  visibility: visible;
+}
