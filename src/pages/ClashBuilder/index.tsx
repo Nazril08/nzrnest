@@ -40,11 +40,12 @@ export interface Builder {
 export interface Building {
   id: number;
   name: string;
-  baseName?: string;
+  baseName: string;
   category: 'defense' | 'resource' | 'army' | 'wall' | 'other';
   duration: number;
   durationText: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'low' | 'medium' | 'high';
+  optimality?: 'Optimal' | 'Suboptimal';
 }
 
 export interface ScheduleItem {
@@ -355,6 +356,106 @@ export default function ClashBuilder() {
       console.error('Error copying to clipboard:', error);
       toast.error('Gagal menyalin ke clipboard');
     }
+  };
+
+  // Fungsi untuk menentukan optimalitas jadwal
+  const determineOptimality = (building: Building, currentTime: number, sleepStartTime: number, sleepEndTime: number): 'Optimal' | 'Suboptimal' => {
+    const endTime = currentTime + building.duration;
+    const nextStartTime = endTime;
+    
+    // Konversi waktu ke format 24 jam untuk memudahkan perbandingan
+    const endTimeHour = new Date(endTime).getHours();
+    const sleepStartHour = new Date(sleepStartTime).getHours();
+    
+    // Jika upgrade selesai saat tidur dan tidak ada upgrade berikutnya yang dijadwalkan
+    if (
+      (endTime >= sleepStartTime && endTime <= sleepEndTime) || 
+      // Atau jika upgrade panjang (> 6 jam) selesai di awal waktu tidur
+      (building.duration > 6 * 60 * 60 * 1000 && 
+       Math.abs(endTimeHour - sleepStartHour) < 2)
+    ) {
+      return 'Suboptimal';
+    }
+    
+    // Jika upgrade pendek dan ada waktu cukup sebelum tidur untuk upgrade lain
+    if (
+      building.duration <= 6 * 60 * 60 * 1000 && 
+      nextStartTime < sleepStartTime && 
+      (sleepStartTime - nextStartTime) < 2 * 60 * 60 * 1000 // Kurang dari 2 jam sebelum tidur
+    ) {
+      return 'Suboptimal';
+    }
+    
+    // Jika upgrade berurutan dengan jeda minimal
+    return 'Optimal';
+  };
+
+  // Fungsi untuk mengoptimalkan urutan upgrade
+  const optimizeBuilderQueue = (buildings: Building[], startTime: number, sleepStartTime: number, sleepEndTime: number): Building[] => {
+    if (buildings.length === 0) return [];
+    
+    // Bagi bangunan menjadi upgrade pendek dan panjang
+    const shortUpgrades = buildings.filter(b => b.duration <= 6 * 60 * 60 * 1000); // <= 6 jam
+    const longUpgrades = buildings.filter(b => b.duration > 6 * 60 * 60 * 1000);  // > 6 jam
+    
+    // Urutkan upgrade pendek berdasarkan durasi (pendek ke panjang)
+    shortUpgrades.sort((a, b) => a.duration - b.duration);
+    
+    // Urutkan upgrade panjang berdasarkan durasi (panjang ke pendek)
+    longUpgrades.sort((a, b) => b.duration - a.duration);
+    
+    const optimizedQueue: Building[] = [];
+    let currentTime = startTime;
+    
+    // Tambahkan upgrade pendek selama masih cukup waktu sebelum tidur
+    for (const upgrade of shortUpgrades) {
+      const endTime = currentTime + upgrade.duration;
+      
+      // Jika upgrade pendek selesai sebelum tidur atau
+      // jika upgrade pendek selesai setelah bangun tidur
+      if (endTime < sleepStartTime || endTime > sleepEndTime) {
+        optimizedQueue.push({...upgrade, optimality: 'Optimal'});
+        currentTime = endTime;
+      } else {
+        // Simpan untuk diproses nanti
+        longUpgrades.push(upgrade);
+      }
+      
+      // Jika waktu yang tersisa sebelum tidur tidak cukup untuk upgrade pendek lainnya
+      // hentikan loop dan mulai proses upgrade panjang
+      if (sleepStartTime - currentTime < 2 * 60 * 60 * 1000) {
+        break;
+      }
+    }
+    
+    // Cari upgrade panjang yang optimal untuk waktu tidur
+    // Prioritaskan upgrade yang selesai setelah bangun tidur
+    longUpgrades.sort((a, b) => {
+      const aEndTime = currentTime + a.duration;
+      const bEndTime = currentTime + b.duration;
+      
+      // Prioritaskan upgrade yang selesai setelah bangun tidur
+      if (aEndTime > sleepEndTime && bEndTime <= sleepEndTime) return -1;
+      if (aEndTime <= sleepEndTime && bEndTime > sleepEndTime) return 1;
+      
+      // Jika keduanya selesai setelah bangun tidur, pilih yang lebih pendek
+      if (aEndTime > sleepEndTime && bEndTime > sleepEndTime) {
+        return a.duration - b.duration;
+      }
+      
+      // Jika keduanya selesai sebelum bangun tidur, pilih yang selesai mendekati waktu bangun
+      return bEndTime - aEndTime;
+    });
+    
+    // Tambahkan upgrade panjang ke queue
+    for (const upgrade of longUpgrades) {
+      const endTime = currentTime + upgrade.duration;
+      const optimality = determineOptimality(upgrade, currentTime, sleepStartTime, sleepEndTime);
+      optimizedQueue.push({...upgrade, optimality});
+      currentTime = endTime;
+    }
+    
+    return optimizedQueue;
   };
 
   // Effect to initialize app

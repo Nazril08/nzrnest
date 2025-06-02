@@ -1,0 +1,200 @@
+[
+    {
+      "web-scraper-order": "1748854136-1",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 1,
+      "Storage Capacity": "1,500",
+      "Hitpoints": 400,
+      "Build Cost": 300,
+      "Build Time": "10s",
+      "Experience Gained": 3,
+      "Town Hall Level Required": 1
+    },
+    {
+      "web-scraper-order": "1748854136-2",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 2,
+      "Storage Capacity": "3,000",
+      "Hitpoints": 600,
+      "Build Cost": 750,
+      "Build Time": "2m",
+      "Experience Gained": 10,
+      "Town Hall Level Required": 2
+    },
+    {
+      "web-scraper-order": "1748854136-3",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 3,
+      "Storage Capacity": "6,000",
+      "Hitpoints": 800,
+      "Build Cost": "1,500",
+      "Build Time": "5m",
+      "Experience Gained": 17,
+      "Town Hall Level Required": 2
+    },
+    {
+      "web-scraper-order": "1748854136-4",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 4,
+      "Storage Capacity": "12,000",
+      "Hitpoints": "1,000",
+      "Build Cost": "3,000",
+      "Build Time": "15m",
+      "Experience Gained": 30,
+      "Town Hall Level Required": 3
+    },
+    {
+      "web-scraper-order": "1748854136-5",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 5,
+      "Storage Capacity": "25,000",
+      "Hitpoints": "1,200",
+      "Build Cost": "6,000",
+      "Build Time": "30m",
+      "Experience Gained": 42,
+      "Town Hall Level Required": 3
+    },
+    {
+      "web-scraper-order": "1748854136-6",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 6,
+      "Storage Capacity": "45,000",
+      "Hitpoints": "1,400",
+      "Build Cost": "12,000",
+      "Build Time": "1h",
+      "Experience Gained": 60,
+      "Town Hall Level Required": 3
+    },
+    {
+      "web-scraper-order": "1748854136-7",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 7,
+      "Storage Capacity": "100,000",
+      "Hitpoints": "1,600",
+      "Build Cost": "25,000",
+      "Build Time": "2h",
+      "Experience Gained": 84,
+      "Town Hall Level Required": 4
+    },
+    {
+      "web-scraper-order": "1748854136-8",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 8,
+      "Storage Capacity": "225,000",
+      "Hitpoints": "1,700",
+      "Build Cost": "50,000",
+      "Build Time": "3h",
+      "Experience Gained": 103,
+      "Town Hall Level Required": 4
+    },
+    {
+      "web-scraper-order": "1748854136-9",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 9,
+      "Storage Capacity": "450,000",
+      "Hitpoints": "1,800",
+      "Build Cost": "100,000",
+      "Build Time": "4h",
+      "Experience Gained": 120,
+      "Town Hall Level Required": 5
+    },
+    {
+      "web-scraper-order": "1748854136-10",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 10,
+      "Storage Capacity": "850,000",
+      "Hitpoints": "1,900",
+      "Build Cost": "250,000",
+      "Build Time": "5h",
+      "Experience Gained": 134,
+      "Town Hall Level Required": 6
+    },
+    {
+      "web-scraper-order": "1748854136-11",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 11,
+      "Storage Capacity": "1,750,000",
+      "Hitpoints": "2,100",
+      "Build Cost": "500,000",
+      "Build Time": "6h",
+      "Experience Gained": 146,
+      "Town Hall Level Required": 7
+    },
+    {
+      "web-scraper-order": "1748854136-12",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 12,
+      "Storage Capacity": "2,000,000",
+      "Hitpoints": "2,500",
+      "Build Cost": "1,000,000",
+      "Build Time": "12h",
+      "Experience Gained": 207,
+      "Town Hall Level Required": 11
+    },
+    {
+      "web-scraper-order": "1748854136-13",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 13,
+      "Storage Capacity": "3,000,000",
+      "Hitpoints": "2,900",
+      "Build Cost": "1,800,000",
+      "Build Time": "1d",
+      "Experience Gained": 293,
+      "Town Hall Level Required": 12
+    },
+    {
+      "web-scraper-order": "1748854136-14",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 14,
+      "Storage Capacity": "4,000,000",
+      "Hitpoints": "3,300",
+      "Build Cost": "2,800,000",
+      "Build Time": "2d",
+      "Experience Gained": 415,
+      "Town Hall Level Required": 13
+    },
+    {
+      "web-scraper-order": "1748854136-15",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 15,
+      "Storage Capacity": "4,500,000",
+      "Hitpoints": "3,700",
+      "Build Cost": "3,000,000",
+      "Build Time": "3d",
+      "Experience Gained": 509,
+      "Town Hall Level Required": 14
+    },
+    {
+      "web-scraper-order": "1748854136-16",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 16,
+      "Storage Capacity": "5,000,000",
+      "Hitpoints": "3,900",
+      "Build Cost": "4,000,000",
+      "Build Time": "4d",
+      "Experience Gained": 587,
+      "Town Hall Level Required": 15
+    },
+    {
+      "web-scraper-order": "1748854136-17",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 17,
+      "Storage Capacity": "5,500,000",
+      "Hitpoints": "4,050",
+      "Build Cost": "5,500,000",
+      "Build Time": "5d",
+      "Experience Gained": 657,
+      "Town Hall Level Required": 16
+    },
+    {
+      "web-scraper-order": "1748854136-18",
+      "web-scraper-start-url": "https://clashofclans.fandom.com/wiki/Gold_Storage/Home_Village",
+      "Level": 18,
+      "Storage Capacity": "6,000,000",
+      "Hitpoints": "4,200",
+      "Build Cost": "10,000,000",
+      "Build Time": "12d 12h",
+      "Experience Gained": "1,039",
+      "Town Hall Level Required": 17
+    }
+  ]
