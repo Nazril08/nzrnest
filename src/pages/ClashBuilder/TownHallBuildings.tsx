@@ -9,6 +9,7 @@ import { Plus, Filter, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import buildingsData from '@/data/buildings.json';
+import resourcesData from '@/data/resources.json';
 import { Building as BuildingType } from './index';
 
 interface Building {
@@ -17,6 +18,7 @@ interface Building {
   "Damage per Attack"?: number;
   "Damage per Shot"?: number;
   "Push Strength"?: string;
+  "Storage Capacity"?: string | number;
   Hitpoints: number | string;
   Cost: string;
   "Build Time": string;
@@ -107,8 +109,10 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
       });
       
       console.log("Processing buildings data:", buildingsData.length, "items");
+      console.log("Processing resources data:", resourcesData.length, "items");
       console.log("BUILDING_CATEGORIES keys:", Object.keys(BUILDING_CATEGORIES));
       
+      // Process buildings data
       buildingsData.forEach((building: any) => {
         // Skip invalid entries
         if (!building["web-scraper-start-url"]) return;
@@ -200,6 +204,7 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
             "Damage per Attack": building["Damage per Attack"],
             "Damage per Shot": building["Damage per Shot"],
             "Push Strength": building["Push Strength"],
+            "Storage Capacity": building["Storage Capacity"],
             Hitpoints: building.Hitpoints,
             Cost: building.Cost,
             "Build Time": building["Build Time"],
@@ -211,6 +216,49 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
           // Add to category
           if (groupedByCategory[category]) {
             groupedByCategory[category].push(cleanBuilding);
+          }
+        }
+      });
+      
+      // Process resources data
+      resourcesData.forEach((resource: any) => {
+        // Skip invalid entries
+        if (!resource["web-scraper-start-url"]) return;
+        
+        const townHallLevel = resource["Town Hall Level Required"];
+        
+        if (townHallLevel <= selectedTownHall) {
+          // Extract resource type from URL
+          const url = resource["web-scraper-start-url"];
+          
+          // Extract resource name from URL
+          let resourceType = "";
+          
+          // Use regex for resources
+          const match = url.match(/wiki\/([^\/]+)(?:\/Home_Village)?(?:\?|$)/);
+          resourceType = match ? match[1] : "";
+          
+          // Replace any spaces or special characters with underscores
+          resourceType = resourceType.replace(/ /g, '_');
+          resourceType = resourceType.replace(/-/g, '_'); // Replace hyphens with underscores
+          
+          console.log(`URL: ${url}, Extracted Resource: ${resourceType}`);
+          
+          // Create a clean resource object
+          const cleanResource: Building = {
+            Level: resource.Level,
+            "Storage Capacity": resource["Storage Capacity"],
+            Hitpoints: resource.Hitpoints,
+            Cost: typeof resource["Build Cost"] === 'number' ? resource["Build Cost"].toString() : resource["Build Cost"],
+            "Build Time": resource["Build Time"],
+            "Experience Gained": resource["Experience Gained"],
+            "Town Hall Level Required": resource["Town Hall Level Required"],
+            buildingType: resourceType
+          };
+          
+          // Add to resource category
+          if (groupedByCategory[CATEGORIES.RESOURCE]) {
+            groupedByCategory[CATEGORIES.RESOURCE].push(cleanResource);
           }
         }
       });
@@ -329,15 +377,18 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
       category = 'wall';
     }
     
-    // Create new building object
+    // Simplify building name
+    const displayName = buildingType.replace(/_/g, ' ');
+    
+    // Create new building object with high priority for resource buildings
     const newBuilding: BuildingType = {
       id: newId,
-      name: `${buildingType.replace(/_/g, ' ')} Level ${building.Level}`,
+      name: `${displayName} Level ${building.Level}`,
       baseName: buildingType.replace(/_/g, ' '),
       category: category,
       duration: durationMs,
       durationText: formatDuration(durationMinutes),
-      priority: 'medium'
+      priority: category === 'resource' ? 'high' : 'medium' // Set resource buildings to high priority by default
     };
     
     // Add to buildings state
@@ -346,7 +397,7 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
     saveToLocalStorage(updatedBuildings);
     
     // Show success message
-    toast.success(`${buildingType.replace(/_/g, ' ')} Level ${building.Level} ditambahkan ke antrean`);
+    toast.success(`${displayName} Level ${building.Level} ditambahkan ke antrean`);
   };
 
   // Toggle expanded state for a building type
@@ -541,6 +592,9 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
                                         {buildings[0]?.["Push Strength"] !== undefined && (
                                           <th scope="col" className="px-3 py-2">Push Strength</th>
                                         )}
+                                        {buildings[0]?.["Storage Capacity"] !== undefined && (
+                                          <th scope="col" className="px-3 py-2">Storage Capacity</th>
+                                        )}
                                         <th scope="col" className="px-3 py-2">Hitpoints</th>
                                         <th scope="col" className="px-3 py-2">Cost</th>
                                         <th scope="col" className="px-3 py-2">Build Time</th>
@@ -572,6 +626,9 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
                                           )}
                                           {building["Push Strength"] !== undefined && (
                                             <td className="px-3 py-2">{building["Push Strength"]}</td>
+                                          )}
+                                          {building["Storage Capacity"] !== undefined && (
+                                            <td className="px-3 py-2">{building["Storage Capacity"]}</td>
                                           )}
                                           <td className="px-3 py-2">{building.Hitpoints}</td>
                                           <td className="px-3 py-2">{building.Cost}</td>

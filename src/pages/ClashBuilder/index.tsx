@@ -40,7 +40,7 @@ export interface Builder {
 export interface Building {
   id: number;
   name: string;
-  baseName: string;
+  baseName?: string;
   category: 'defense' | 'resource' | 'army' | 'wall' | 'other';
   duration: number;
   durationText: string;
@@ -394,20 +394,42 @@ export default function ClashBuilder() {
   const optimizeBuilderQueue = (buildings: Building[], startTime: number, sleepStartTime: number, sleepEndTime: number): Building[] => {
     if (buildings.length === 0) return [];
     
-    // Bagi bangunan menjadi upgrade pendek dan panjang
-    const shortUpgrades = buildings.filter(b => b.duration <= 6 * 60 * 60 * 1000); // <= 6 jam
-    const longUpgrades = buildings.filter(b => b.duration > 6 * 60 * 60 * 1000);  // > 6 jam
+    // Kelompokkan bangunan berdasarkan prioritas
+    const highPriorityBuildings = buildings.filter(b => b.priority === 'high');
+    const mediumPriorityBuildings = buildings.filter(b => b.priority === 'medium');
+    const lowPriorityBuildings = buildings.filter(b => b.priority === 'low');
     
-    // Urutkan upgrade pendek berdasarkan durasi (pendek ke panjang)
-    shortUpgrades.sort((a, b) => a.duration - b.duration);
+    // Untuk setiap kelompok prioritas, pisahkan antara upgrade pendek dan panjang
+    const processBuildings = (priorityBuildings: Building[]): Building[] => {
+      // Bagi bangunan menjadi upgrade pendek dan panjang
+      const shortUpgrades = priorityBuildings.filter(b => b.duration <= 6 * 60 * 60 * 1000); // <= 6 jam
+      const longUpgrades = priorityBuildings.filter(b => b.duration > 6 * 60 * 60 * 1000);  // > 6 jam
+      
+      // Urutkan upgrade pendek berdasarkan durasi (pendek ke panjang)
+      shortUpgrades.sort((a, b) => a.duration - b.duration);
+      
+      // Urutkan upgrade panjang berdasarkan durasi (panjang ke pendek)
+      longUpgrades.sort((a, b) => b.duration - a.duration);
+      
+      return [...shortUpgrades, ...longUpgrades];
+    };
     
-    // Urutkan upgrade panjang berdasarkan durasi (panjang ke pendek)
-    longUpgrades.sort((a, b) => b.duration - a.duration);
+    // Proses setiap kelompok prioritas
+    const sortedHighPriority = processBuildings(highPriorityBuildings);
+    const sortedMediumPriority = processBuildings(mediumPriorityBuildings);
+    const sortedLowPriority = processBuildings(lowPriorityBuildings);
+    
+    // Gabungkan semua bangunan berdasarkan prioritas
+    const sortedBuildings = [...sortedHighPriority, ...sortedMediumPriority, ...sortedLowPriority];
     
     const optimizedQueue: Building[] = [];
     let currentTime = startTime;
     
     // Tambahkan upgrade pendek selama masih cukup waktu sebelum tidur
+    const shortUpgrades = sortedBuildings.filter(b => b.duration <= 6 * 60 * 60 * 1000);
+    const longUpgrades = sortedBuildings.filter(b => b.duration > 6 * 60 * 60 * 1000);
+    
+    // Proses upgrade pendek terlebih dahulu
     for (const upgrade of shortUpgrades) {
       const endTime = currentTime + upgrade.duration;
       
@@ -431,6 +453,12 @@ export default function ClashBuilder() {
     // Cari upgrade panjang yang optimal untuk waktu tidur
     // Prioritaskan upgrade yang selesai setelah bangun tidur
     longUpgrades.sort((a, b) => {
+      // Prioritaskan berdasarkan tingkat prioritas terlebih dahulu
+      if (a.priority !== b.priority) {
+        const priorityValues = { high: 3, medium: 2, low: 1 };
+        return priorityValues[b.priority] - priorityValues[a.priority];
+      }
+      
       const aEndTime = currentTime + a.duration;
       const bEndTime = currentTime + b.duration;
       
