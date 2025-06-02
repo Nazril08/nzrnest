@@ -16,6 +16,7 @@ interface Building {
   "Damage per Second"?: number;
   "Damage per Attack"?: number;
   "Damage per Shot"?: number;
+  "Push Strength"?: string;
   Hitpoints: number | string;
   Cost: string;
   "Build Time": string;
@@ -105,15 +106,92 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
         }
       });
       
+      console.log("Processing buildings data:", buildingsData.length, "items");
+      console.log("BUILDING_CATEGORIES keys:", Object.keys(BUILDING_CATEGORIES));
+      
       buildingsData.forEach((building: any) => {
-        if (building["web-scraper-start-url"] && building["Town Hall Level Required"] <= selectedTownHall) {
+        // Skip invalid entries
+        if (!building["web-scraper-start-url"]) return;
+        
+        // Fix inconsistent data types
+        let townHallLevel = building["Town Hall Level Required"];
+        // If Town Hall Level is a string (like "1,500"), convert it to number
+        if (typeof townHallLevel === 'string' && townHallLevel.includes(',')) {
+          townHallLevel = parseInt(townHallLevel.replace(/,/g, ''));
+        }
+        
+        // Special case for Inferno Tower
+        if (building["web-scraper-start-url"].includes("Inferno_Tower") || 
+            building["web-scraper-start-url"].includes("Inferno Tower")) {
+          // Fix data based on the photo
+          const level = building.Level;
+          
+          // Inferno Tower data from the photo
+          const infernoData = {
+            1: { th: 10, cost: "1,000,000", buildTime: "12h", hitpoints: "1,500", dps: 30, dph: 80 },
+            2: { th: 10, cost: "1,200,000", buildTime: "1d", hitpoints: "1,800", dps: 35, dph: 100 },
+            3: { th: 10, cost: "2,400,000", buildTime: "2d", hitpoints: "2,100", dps: 40, dph: 120 },
+            4: { th: 11, cost: "3,400,000", buildTime: "2d 12h", hitpoints: "2,400", dps: 45, dph: 140 },
+            5: { th: 11, cost: "4,200,000", buildTime: "3d", hitpoints: "2,700", dps: 50, dph: 150 },
+            6: { th: 12, cost: "6,000,000", buildTime: "5d", hitpoints: "3,000", dps: 55, dph: 160 },
+            7: { th: 13, cost: "8,000,000", buildTime: "7d", hitpoints: "3,300", dps: 65, dph: 180 },
+            8: { th: 14, cost: "9,500,000", buildTime: "7d 12h", hitpoints: "3,700", dps: 80, dph: 210 },
+            9: { th: 15, cost: "10,000,000", buildTime: "7d 18h", hitpoints: "4,000", dps: 100, dph: 230 },
+            10: { th: 16, cost: "11,000,000", buildTime: "8d", hitpoints: "4,400", dps: 120, dph: 260 },
+            11: { th: 17, cost: "22,000,000", buildTime: "15d 12h", hitpoints: "4,800", dps: 140, dph: 290 }
+          };
+          
+          if (infernoData[level]) {
+            const data = infernoData[level];
+            townHallLevel = data.th;
+            building.Cost = data.cost;
+            building["Build Time"] = data.buildTime;
+            building.Hitpoints = data.hitpoints;
+            building["Damage per Second"] = data.dps;
+            building["Damage per Hit"] = data.dph;
+          }
+        }
+        
+        if (townHallLevel <= selectedTownHall) {
           // Extract building type from URL
           const url = building["web-scraper-start-url"];
-          const urlParts = url.split('/');
-          const buildingType = urlParts[urlParts.length - 1];
+          
+          // Extract building name from URL
+          let buildingType = "";
+          
+          // Special cases for buildings with special characters in URL
+          if (url.includes("X-Bow")) {
+            buildingType = "X_Bow";
+          } else if (url.includes("Hidden_Tesla") || url.includes("Hidden Tesla")) {
+            buildingType = "Hidden_Tesla";
+          } else if (url.includes("Air_Sweeper") || url.includes("Air Sweeper")) {
+            buildingType = "Air_Sweeper";
+          } else if (url.includes("Inferno_Tower") || url.includes("Inferno Tower")) {
+            buildingType = "Inferno_Tower";
+          } else {
+            // Use regex for other buildings
+            const match = url.match(/wiki\/([^\/]+)(?:\/Home_Village)?(?:\?|$)/);
+            buildingType = match ? match[1] : "";
+            
+            // Replace any spaces or special characters with underscores
+            buildingType = buildingType.replace(/ /g, '_');
+            buildingType = buildingType.replace(/-/g, '_'); // Replace hyphens with underscores
+          }
+          
+          // Special logging for debugging
+          console.log(`URL: ${url}, Extracted: ${buildingType}`);
+          
+          // Special logging for Hidden Tesla
+          if (url.includes("Hidden_Tesla") || url.includes("Hidden Tesla")) {
+            console.log("Found Hidden Tesla:", building);
+            console.log("Is in BUILDING_CATEGORIES:", BUILDING_CATEGORIES.hasOwnProperty(buildingType));
+            console.log("Category:", BUILDING_CATEGORIES[buildingType] || "Not found");
+          }
           
           // Determine category
           const category = BUILDING_CATEGORIES[buildingType] || CATEGORIES.OTHER;
+          
+          console.log(`Building: ${buildingType}, Level: ${building.Level}, TH: ${building["Town Hall Level Required"]}, Category: ${category}`);
           
           // Create a clean building object without web-scraper properties
           const cleanBuilding: Building = {
@@ -121,6 +199,7 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
             "Damage per Second": building["Damage per Second"],
             "Damage per Attack": building["Damage per Attack"],
             "Damage per Shot": building["Damage per Shot"],
+            "Push Strength": building["Push Strength"],
             Hitpoints: building.Hitpoints,
             Cost: building.Cost,
             "Build Time": building["Build Time"],
@@ -134,6 +213,11 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
             groupedByCategory[category].push(cleanBuilding);
           }
         }
+      });
+      
+      // Log category counts
+      Object.keys(groupedByCategory).forEach(category => {
+        console.log(`Category ${category}: ${groupedByCategory[category].length} buildings`);
       });
       
       // Sort buildings within each category by building type and level
@@ -153,6 +237,12 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
 
     processData();
   }, [selectedTownHall]);
+
+  // Reset expanded state when town hall or category changes
+  useEffect(() => {
+    // Reset all buildings to collapsed state
+    setExpandedBuildings({});
+  }, [selectedTownHall, selectedCategory]);
 
   // Get buildings that are exactly for the selected TH level
   const getBuildingsForExactTH = (buildings: Building[]): Building[] => {
@@ -404,7 +494,7 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
                   {Object.keys(buildingsByType).length > 0 ? (
                     <div className="space-y-3">
                       {Object.entries(buildingsByType).map(([buildingType, buildings]) => {
-                        const isExpanded = expandedBuildings[buildingType] !== false; // Default to expanded
+                        const isExpanded = expandedBuildings[buildingType] === true; // Default to collapsed
                         const maxLevel = Math.max(...buildings.map(b => b.Level));
                         const displayName = buildingType.replace(/_/g, ' ');
                         
@@ -448,6 +538,9 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
                                         {buildings[0]?.["Damage per Shot"] !== undefined && (
                                           <th scope="col" className="px-3 py-2">Damage/Shot</th>
                                         )}
+                                        {buildings[0]?.["Push Strength"] !== undefined && (
+                                          <th scope="col" className="px-3 py-2">Push Strength</th>
+                                        )}
                                         <th scope="col" className="px-3 py-2">Hitpoints</th>
                                         <th scope="col" className="px-3 py-2">Cost</th>
                                         <th scope="col" className="px-3 py-2">Build Time</th>
@@ -476,6 +569,9 @@ export default function TownHallBuildings({ buildings, setBuildings, saveToLocal
                                           )}
                                           {building["Damage per Shot"] !== undefined && (
                                             <td className="px-3 py-2">{building["Damage per Shot"]}</td>
+                                          )}
+                                          {building["Push Strength"] !== undefined && (
+                                            <td className="px-3 py-2">{building["Push Strength"]}</td>
                                           )}
                                           <td className="px-3 py-2">{building.Hitpoints}</td>
                                           <td className="px-3 py-2">{building.Cost}</td>

@@ -284,44 +284,44 @@ export default function BuilderStatus({
                 </TooltipProvider>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <div className="relative">
-                  <Input
-                    id={`builder${index}_days`}
-                    type="number"
-                    placeholder="0"
-                    min={0}
-                    value={getBuilderRemainingTime(builder).days > 0 ? getBuilderRemainingTime(builder).days : ''}
-                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'days', parseInt(e.target.value) || 0)}
-                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Hari</span>
-                </div>
-                <div className="relative">
-                  <Input
-                    id={`builder${index}_hours`}
-                    type="number"
-                    placeholder="0"
-                    min={0}
-                    max={23}
-                    value={getBuilderRemainingTime(builder).hours > 0 ? getBuilderRemainingTime(builder).hours : ''}
-                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'hours', parseInt(e.target.value) || 0)}
-                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Jam</span>
-                </div>
-                <div className="relative">
-                  <Input
-                    id={`builder${index}_minutes`}
-                    type="number"
-                    placeholder="0"
-                    min={0}
-                    max={59}
-                    value={getBuilderRemainingTime(builder).minutes > 0 ? getBuilderRemainingTime(builder).minutes : ''}
-                    onChange={(e) => updateBuilderDaysHoursMinutes(index, 'minutes', parseInt(e.target.value) || 0)}
-                    className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Menit</span>
-                </div>
+              <div className="relative">
+                <Input
+                  id={`builder${index}_days`}
+                  type="number"
+                  placeholder="0"
+                  min={0}
+                  value={getBuilderRemainingTime(builder).days > 0 ? getBuilderRemainingTime(builder).days : ''}
+                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'days', parseInt(e.target.value) || 0)}
+                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Hari</span>
+              </div>
+              <div className="relative">
+                <Input
+                  id={`builder${index}_hours`}
+                  type="number"
+                  placeholder="0"
+                  min={0}
+                  max={23}
+                  value={getBuilderRemainingTime(builder).hours > 0 ? getBuilderRemainingTime(builder).hours : ''}
+                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'hours', parseInt(e.target.value) || 0)}
+                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Jam</span>
+              </div>
+              <div className="relative">
+                <Input
+                  id={`builder${index}_minutes`}
+                  type="number"
+                  placeholder="0"
+                  min={0}
+                  max={59}
+                  value={getBuilderRemainingTime(builder).minutes > 0 ? getBuilderRemainingTime(builder).minutes : ''}
+                  onChange={(e) => updateBuilderDaysHoursMinutes(index, 'minutes', parseInt(e.target.value) || 0)}
+                  className="pl-2 pr-8 py-1 text-sm no-spinner bg-[#1d1040]/50 border-[#2a1b4a] text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">Menit</span>
+              </div>
               </div>
               
               {/* Add completion date display */}
