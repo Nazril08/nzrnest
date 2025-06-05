@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search } from "lucide-react";
+import { ArrowRight, Zap, Image, FileText, Video, Music, Cpu, Search, Mic } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,24 @@ const Index = () => {
       category: "image",
       path: "/image-superscale",
       badge: "ML"
+    },
+    {
+      title: "Music Recognition",
+      description: "Identify songs from audio URLs using Shazam API",
+      icon: Music,
+      featured: true,
+      category: "audio",
+      path: "/music-recognition",
+      badge: "API"
+    },
+    {
+      title: "Voice to Text",
+      description: "Convert audio files to text using AI transcription",
+      icon: Mic,
+      featured: true,
+      category: "audio",
+      path: "/voice-to-text",
+      badge: "API"
     },
     {
       title: "COC Builder Planner",
